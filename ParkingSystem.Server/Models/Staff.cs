@@ -1,0 +1,19 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace ParkingSystem.Server.Models;
+
+public partial class Staff
+{
+    public Guid StaffId { get; set; }
+
+    public string FullName { get; set; } = null!;
+
+    public string Username { get; set; } = null!;
+
+    public string PasswordHash { get; set; } = null!;
+
+    public string? Shift { get; set; }
+
+    public virtual ICollection<ParkingRegistration> ParkingRegistrations { get; set; } = new List<ParkingRegistration>();
+}
