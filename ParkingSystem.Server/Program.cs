@@ -1,4 +1,5 @@
 using ParkingSystem.Server.Components;
+using ParkingSystem.Server.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,5 +24,9 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+// Add in Program.cs
+builder.Services.AddSignalR();
 
+// Add in app configuration section
+app.MapHub<ParkingHub>("/parkinghub");
 app.Run();
