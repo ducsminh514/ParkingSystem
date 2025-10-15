@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ParkingSystem.Server.Models;
+namespace ParkingSystem.Shared.Models;
 
 public partial class Customer
 {
