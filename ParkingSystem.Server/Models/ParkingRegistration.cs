@@ -21,7 +21,7 @@ public partial class ParkingRegistration
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
-    public virtual ParkingSlot Slot { get; set; } = null!;
+    public virtual ParkingSlot? Slot { get; set; } = null!;
 
     public virtual Staff? Staff { get; set; }
 

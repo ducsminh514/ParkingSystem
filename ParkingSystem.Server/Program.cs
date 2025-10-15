@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Components;
 using ParkingSystem.Server.Hubs;
 using ParkingSystem.Server.Models;
@@ -13,8 +14,19 @@ builder.Services.AddDbContext<ParkingManagementContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyParkingManagementContext"));
 });
 // Add SignalR
-builder.Services.AddSignalR();
-// Program.cs
+builder.Services.AddSignalR(options =>
+    {
+        options.EnableDetailedErrors = true;
+    })
+    .AddJsonProtocol(options =>
+    {
+        // Xử lý circular reference
+        options.PayloadSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        // Hoặc dùng: ReferenceHandler.Preserve (giữ lại references)
+
+        options.PayloadSerializerOptions.WriteIndented = false;
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+    });// Program.cs
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazor", policy =>

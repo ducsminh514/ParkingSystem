@@ -102,5 +102,30 @@ namespace ParkingSystem.Server.Hubs
                 .Include(c => c.Vehicles)
                 .ToListAsync();
         }
+
+        public async Task<Customer?> GetCustomerWithFullDetails(Guid customerId)
+        {
+            try
+            {
+                // CÁCH 1: Gộp chung 1 chain Include
+                var customer = await _context.Customers
+                    .Include(c => c.Vehicles)
+                    .ThenInclude(v => v.ParkingRegistrations.OrderByDescending(pr => pr.CheckInTime))
+                    .ThenInclude(pr => pr.Slot)
+                    .Include(c => c.Vehicles)
+                    .ThenInclude(v => v.ParkingRegistrations)
+                    .ThenInclude(pr => pr.Payments)
+                    .AsNoTracking()
+                    .AsSplitQuery() // QUAN TRỌNG: Tránh cartesian explosion
+                    .FirstOrDefaultAsync(c => c.CustomerId == customerId);
+
+                return customer;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting customer details {customerId}");
+                throw new HubException("Không thể lấy thông tin chi tiết khách hàng");
+            }
+        }
     }
 }
