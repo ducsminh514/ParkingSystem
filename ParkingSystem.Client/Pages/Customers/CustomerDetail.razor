@@ -1,0 +1,117 @@
+﻿@page "/customers/{CustomerId:guid}"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Client.Services
+@inject ParkingService ParkingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Chi Tiết Khách Hàng</PageTitle>
+
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="/customers">Khách Hàng</a>
+            </li>
+            <li class="breadcrumb-item active">Chi Tiết</li>
+        </ol>
+    </nav>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Đang tải...</p>
+        </div>
+    }
+    else if (customer == null)
+    {
+        <div class="alert alert-warning">
+            Không tìm thấy khách hàng
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="bi bi-person-circle"></i> Thông Tin Khách Hàng</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Họ và Tên:</strong><br />@customer.FullName</p>
+                        <p><strong>Số Điện Thoại:</strong><br />@customer.Phone</p>
+                        <p><strong>Email:</strong><br />@(customer.Email ?? "Chưa có")</p>
+                        <p><strong>ID:</strong><br /><small class="text-muted">@customer.CustomerId</small></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-car-front-fill"></i> Danh Sách Xe</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (customer.Vehicles.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Biển Số</th>
+                                            <th>Loại Xe</th>
+                                            <th>Số Lần Đăng Ký</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var vehicle in customer.Vehicles)
+                                        {
+                                            <tr>
+                                                <td><strong>@vehicle.PlateNumber</strong></td>
+                                                <td>@vehicle.VehicleType</td>
+                                                <td>
+                                                    <span class="badge bg-info">
+                                                        @vehicle.ParkingRegistrations.Count lần
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Chưa có xe nào được đăng ký</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid CustomerId { get; set; }
+
+    private Customer? customer;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await ParkingService.InitializeAsync();
+            customer = await ParkingService.GetCustomerWithFullDetailsAsync(CustomerId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

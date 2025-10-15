@@ -1,0 +1,430 @@
+﻿@page "/customers"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Client.Services
+@inject ParkingService ParkingService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<PageTitle>Quản Lý Khách Hàng</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-people-fill"></i> Danh Sách Khách Hàng</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowAddCustomerModal">
+                <i class="bi bi-plus-circle"></i> Thêm Khách Hàng
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <!-- Search Bar -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Tìm kiếm theo tên, SĐT, email..."
+                               @bind="searchKeyword"
+                               @bind:event="oninput"
+                               @onkeyup="OnSearch" />
+                        @if (!string.IsNullOrEmpty(searchKeyword))
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="badge bg-info">Tổng số: @customers.Count khách hàng</span>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                    <p class="mt-2">Đang tải dữ liệu...</p>
+                </div>
+            }
+            else if (customers.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">
+                        @if (string.IsNullOrEmpty(searchKeyword))
+                        {
+                            <text>Chưa có khách hàng nào</text>
+                        }
+                        else
+                        {
+                            <text>Không tìm thấy khách hàng nào phù hợp</text>
+                        }
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tên Khách Hàng</th>
+                                <th>Số Điện Thoại</th>
+                                <th>Email</th>
+                                <th>Số Xe</th>
+                                <th style="width: 200px;">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var customer in customers)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@customer.FullName</strong>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-telephone-fill text-primary"></i> @customer.Phone
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(customer.Email))
+                                        {
+                                            <i class="bi bi-envelope-fill text-info"></i>
+                                            <text>@customer.Email</text>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Chưa có</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            @customer.Vehicles.Count xe
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-info"
+                                                    @onclick="() => ViewCustomerDetails(customer.CustomerId)"
+                                                    title="Chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning"
+                                                    @onclick="() => EditCustomer(customer)"
+                                                    title="Sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger"
+                                                    @onclick="() => ConfirmDeleteCustomer(customer)"
+                                                    title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Customer Modal -->
+@if (showCustomerModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @if (isEditMode)
+                        {
+                            <text><i class="bi bi-pencil-square"></i> Cập Nhật Khách Hàng</text>
+                        }
+                        else
+                        {
+                            <text><i class="bi bi-person-plus-fill"></i> Thêm Khách Hàng Mới</text>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseCustomerModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="currentCustomer" OnValidSubmit="SaveCustomer">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Họ và Tên <span class="text-danger">*</span></label>
+                            <InputText @bind-Value="currentCustomer.FullName" class="form-control" />
+                            <ValidationMessage For="@(() => currentCustomer.FullName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
+                            <InputText @bind-Value="currentCustomer.Phone" class="form-control" />
+                            <ValidationMessage For="@(() => currentCustomer.Phone)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText @bind-Value="currentCustomer.Email" class="form-control" type="email" />
+                            <ValidationMessage For="@(() => currentCustomer.Email)" />
+                        </div>
+
+                        @if (!isEditMode)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Mật Khẩu <span class="text-danger">*</span></label>
+                                <InputText @bind-Value="currentCustomer.PasswordHash"
+                                           class="form-control"
+                                           type="password" />
+                                <ValidationMessage For="@(() => currentCustomer.PasswordHash)" />
+                            </div>
+                        }
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCustomerModal">
+                                Hủy
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                @(isEditMode ? "Cập Nhật" : "Thêm Mới")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Customer> customers = new();
+    private string searchKeyword = string.Empty;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    // Modal state
+    private bool showCustomerModal = false;
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private Customer currentCustomer = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Initialize SignalR connection
+            await ParkingService.InitializeAsync();
+
+            // Register real-time event handlers
+            ParkingService.OnCustomerAdded += HandleCustomerAdded;
+            ParkingService.OnCustomerUpdated += HandleCustomerUpdated;
+            ParkingService.OnCustomerDeleted += HandleCustomerDeleted;
+
+            // Load initial data
+            await LoadCustomers();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khởi tạo: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            customers = await ParkingService.GetAllCustomersAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải danh sách: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnSearch()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            if (string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                await LoadCustomers();
+            }
+            else
+            {
+                customers = await ParkingService.SearchCustomersAsync(searchKeyword);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi tìm kiếm: {ex.Message}";
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        searchKeyword = string.Empty;
+        await LoadCustomers();
+    }
+
+    // Modal operations
+    private void ShowAddCustomerModal()
+    {
+        currentCustomer = new Customer();
+        isEditMode = false;
+        showCustomerModal = true;
+    }
+
+    private void EditCustomer(Customer customer)
+    {
+        currentCustomer = new Customer
+            {
+                CustomerId = customer.CustomerId,
+                FullName = customer.FullName,
+                Phone = customer.Phone,
+                Email = customer.Email,
+                PasswordHash = customer.PasswordHash
+            };
+        isEditMode = true;
+        showCustomerModal = true;
+    }
+
+    private void CloseCustomerModal()
+    {
+        showCustomerModal = false;
+        currentCustomer = new();
+        errorMessage = string.Empty;
+    }
+
+    private async Task SaveCustomer()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = string.Empty;
+
+            if (isEditMode)
+            {
+                await ParkingService.UpdateCustomerAsync(currentCustomer);
+                successMessage = "Cập nhật khách hàng thành công!";
+            }
+            else
+            {
+                await ParkingService.AddCustomerAsync(currentCustomer);
+                successMessage = "Thêm khách hàng mới thành công!";
+            }
+
+            CloseCustomerModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ConfirmDeleteCustomer(Customer customer)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"Bạn có chắc muốn xóa khách hàng '{customer.FullName}'?\n\nThao tác này không thể hoàn tác!");
+
+        if (confirmed)
+        {
+            try
+            {
+                await ParkingService.DeleteCustomerAsync(customer.CustomerId);
+                successMessage = $"Đã xóa khách hàng '{customer.FullName}'";
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Không thể xóa: {ex.Message}";
+            }
+        }
+    }
+
+    private void ViewCustomerDetails(Guid customerId)
+    {
+        NavigationManager.NavigateTo($"/customers/{customerId}");
+    }
+
+    // ============ REAL-TIME EVENT HANDLERS ============
+    private async Task HandleCustomerAdded(Customer customer)
+    {
+        customers.Insert(0, customer);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleCustomerUpdated(Customer customer)
+    {
+        var index = customers.FindIndex(c => c.CustomerId == customer.CustomerId);
+        if (index >= 0)
+        {
+            customers[index] = customer;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task HandleCustomerDeleted(Guid customerId)
+    {
+        var customer = customers.FirstOrDefault(c => c.CustomerId == customerId);
+        if (customer != null)
+        {
+            customers.Remove(customer);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Unregister event handlers
+        ParkingService.OnCustomerAdded -= HandleCustomerAdded;
+        ParkingService.OnCustomerUpdated -= HandleCustomerUpdated;
+        ParkingService.OnCustomerDeleted -= HandleCustomerDeleted;
+    }
+}
