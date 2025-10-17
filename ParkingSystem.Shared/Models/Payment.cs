@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 namespace ParkingSystem.Shared.Models;
 
@@ -15,5 +16,6 @@ public partial class Payment
 
     public DateTime PaymentDate { get; set; }
 
+    [ForeignKey(nameof(RegistrationId))]
     public virtual ParkingRegistration Registration { get; set; } = null!;
 }

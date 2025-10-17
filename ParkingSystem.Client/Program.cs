@@ -8,7 +8,10 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+// HttpClient cho API calls - trỏ đến Server
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7142/") });
+
+// ParkingService
 builder.Services.AddScoped<ParkingService>();
 // Program.cs (Server)
 //builder.Services.AddCors(options =>

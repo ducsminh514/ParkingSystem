@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
+using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Server.Hubs
 {
@@ -97,8 +98,8 @@ namespace ParkingSystem.Server.Hubs
 
             return await _context.Customers
                 .Where(c => c.FullName.Contains(keyword)
-                         || c.Phone.Contains(keyword)
-                         || c.Email.Contains(keyword))
+                         || (c.Phone != null && c.Phone.Contains(keyword))
+                         || (c.Email != null && c.Email.Contains(keyword)))
                 .Include(c => c.Vehicles)
                 .ToListAsync();
         }

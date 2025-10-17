@@ -22,10 +22,12 @@ public partial class ParkingRegistration
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
-    [ForeignKey("SlotID")]
+    [ForeignKey(nameof(SlotId))]
     public virtual ParkingSlot? Slot { get; set; } = null!;
 
+    [ForeignKey(nameof(StaffId))]
     public virtual Staff? Staff { get; set; }
 
+    [ForeignKey(nameof(VehicleId))]
     public virtual Vehicle Vehicle { get; set; } = null!;
 }

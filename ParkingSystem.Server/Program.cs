@@ -3,15 +3,25 @@ using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Components;
 using ParkingSystem.Server.Hubs;
 using ParkingSystem.Server.Models;
-
+using Microsoft.AspNetCore.Builder;
+using System.Text.Json;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Add Controllers for API
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.WriteIndented = false;
+    });
+
 builder.Services.AddDbContext<ParkingManagementContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyParkingManagementContext"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ParkingManagementContext"));
 });
 // Add SignalR
 builder.Services.AddSignalR(options =>
@@ -40,29 +50,34 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
-// Sau khi build
-app.UseCors("AllowBlazor");
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles(); // Remove the duplicate later
+// CORS must be before UseRouting
+app.UseCors("AllowBlazor");
 
-app.UseRouting(); // Must come before UseAntiforgery
+app.UseStaticFiles();
 
-app.UseAntiforgery(); // Must come after UseRouting
+app.UseRouting();
+
+// API Controllers - no antiforgery required
+app.MapControllers();
+
+// SignalR hub
+app.MapHub<ParkingHub>("/parkinghub");
+
+// Antiforgery for Razor Components only
+app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-// Map SignalR hub
-app.MapHub<ParkingHub>("/parkinghub");
 
 
 app.Run();
