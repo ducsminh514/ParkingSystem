@@ -1,12 +1,94 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+﻿@using ParkingSystem.Client.Services
+@inject ISignalRConnectionService ConnectionService
+
+<div class="app-container">
+    <!-- Connection Status Bar -->
+    <div class="connection-status @GetConnectionClass()">
+        @if (ConnectionService.IsConnected)
+        {
+            <span>🟢 Connected</span>
+        }
+        else
+        {
+            <span>🔴 Disconnected - Reconnecting...</span>
+        }
+    </div>
+
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Listen to connection events
+        ConnectionService.Reconnecting += OnReconnecting;
+        ConnectionService.Reconnected += OnReconnected;
+        ConnectionService.Closed += OnClosed;
+    }
+
+    private Task OnReconnecting(Exception? error)
+    {
+        Console.WriteLine("Reconnecting...");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnReconnected(string? connectionId)
+    {
+        Console.WriteLine($"Reconnected! ConnectionId: {connectionId}");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnClosed(Exception? error)
+    {
+        Console.WriteLine($"Connection closed: {error?.Message}");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private string GetConnectionClass()
+    {
+        return ConnectionService.IsConnected ? "connected" : "disconnected";
+    }
+
+    public void Dispose()
+    {
+        ConnectionService.Reconnecting -= OnReconnecting;
+        ConnectionService.Reconnected -= OnReconnected;
+        ConnectionService.Closed -= OnClosed;
+    }
+}
+
+<style>
+    .connection-status {
+        position: fixed;
+        top: 0;
+        right: 0;
+        padding: 5px 15px;
+        font-size: 12px;
+        z-index: 9999;
+        border-radius: 0 0 0 5px;
+    }
+
+        .connection-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .connection-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+</style>
