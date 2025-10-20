@@ -35,9 +35,15 @@ namespace ParkingSystem.Server.Hubs
                 report.Status = "Pending";
                 report.CreatedDate = DateTime.Now;
 
-                _context.CustomerReports.Add(report);
-                await _context.SaveChangesAsync();
-
+                try
+                {
+                    _context.CustomerReports.Add(report);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Loiix choox nayf :   "+e);
+                }
                 // Load related data
                 var createdReport = await _context.CustomerReports
                     .Include(r => r.Customer)

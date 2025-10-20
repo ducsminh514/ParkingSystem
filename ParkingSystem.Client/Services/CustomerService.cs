@@ -24,6 +24,7 @@ namespace ParkingSystem.Client.Services
             _logger = logger;
         }
 
+
         // ============ INITIALIZE CONNECTION ============
         public async Task InitializeAsync()
         {
