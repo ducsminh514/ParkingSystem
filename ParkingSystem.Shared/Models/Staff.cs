@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+
 namespace ParkingSystem.Shared.Models;
 
 public partial class Staff
@@ -14,6 +14,8 @@ public partial class Staff
     public string PasswordHash { get; set; } = null!;
 
     public string? Shift { get; set; }
+
+    public virtual ICollection<CustomerReport> CustomerReports { get; set; } = new List<CustomerReport>();
 
     public virtual ICollection<ParkingRegistration> ParkingRegistrations { get; set; } = new List<ParkingRegistration>();
 }

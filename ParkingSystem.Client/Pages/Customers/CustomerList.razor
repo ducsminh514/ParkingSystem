@@ -1,7 +1,7 @@
 ﻿@page "/customers"
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Client.Services
-@inject ParkingService ParkingService
+@inject CustomerService ParkingService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
@@ -427,4 +427,5 @@
         ParkingService.OnCustomerUpdated -= HandleCustomerUpdated;
         ParkingService.OnCustomerDeleted -= HandleCustomerDeleted;
     }
+
 }

@@ -5,11 +5,11 @@ using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Client.Services
 {
-    public class ParkingService : IAsyncDisposable
+    public class CustomerService : IAsyncDisposable
     {
         private HubConnection? _hubConnection;
         private readonly HttpClient _httpClient;
-        private readonly ILogger<ParkingService> _logger;
+        private readonly ILogger<CustomerService> _logger;
 
         // Events for real-time updates
         public event Func<Customer, Task>? OnCustomerAdded;
@@ -18,11 +18,12 @@ namespace ParkingSystem.Client.Services
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
-        public ParkingService(HttpClient httpClient, ILogger<ParkingService> logger)
+        public CustomerService(HttpClient httpClient, ILogger<CustomerService> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
         }
+
 
         // ============ INITIALIZE CONNECTION ============
         public async Task InitializeAsync()

@@ -17,11 +17,19 @@ public partial class ParkingManagementContext : DbContext
 
     public virtual DbSet<Customer> Customers { get; set; }
 
+    public virtual DbSet<CustomerReport> CustomerReports { get; set; }
+
     public virtual DbSet<ParkingRegistration> ParkingRegistrations { get; set; }
 
     public virtual DbSet<ParkingSlot> ParkingSlots { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
+
+    public virtual DbSet<ReportAttachment> ReportAttachments { get; set; }
+
+    public virtual DbSet<ReportCategory> ReportCategories { get; set; }
+
+    public virtual DbSet<ReportComment> ReportComments { get; set; }
 
     public virtual DbSet<Staff> Staff { get; set; }
 
@@ -48,6 +56,52 @@ public partial class ParkingManagementContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(15)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<CustomerReport>(entity =>
+        {
+            entity.HasKey(e => e.ReportId).HasName("PK__Customer__D5BD48E5AE46D604");
+
+            entity.ToTable("CustomerReport");
+
+            entity.HasIndex(e => e.CreatedDate, "IDX_CustomerReport_CreatedDate").IsDescending();
+
+            entity.HasIndex(e => e.CustomerId, "IDX_CustomerReport_CustomerID");
+
+            entity.HasIndex(e => e.Status, "IDX_CustomerReport_Status");
+
+            entity.Property(e => e.ReportId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("ReportID");
+            entity.Property(e => e.AssignedStaffId).HasColumnName("AssignedStaffID");
+            entity.Property(e => e.CategoryId).HasColumnName("CategoryID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.CustomerId).HasColumnName("CustomerID");
+            entity.Property(e => e.Priority)
+                .HasMaxLength(20)
+                .HasDefaultValue("Normal");
+            entity.Property(e => e.ResolvedDate).HasColumnType("datetime");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.UpdatedDate).HasColumnType("datetime");
+
+            entity.HasOne(d => d.AssignedStaff).WithMany(p => p.CustomerReports)
+                .HasForeignKey(d => d.AssignedStaffId)
+                .HasConstraintName("FK__CustomerR__Assig__693CA210");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.CustomerReports)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__CustomerR__Categ__68487DD7");
+
+            entity.HasOne(d => d.Customer).WithMany(p => p.CustomerReports)
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__CustomerR__Custo__6754599E");
         });
 
         modelBuilder.Entity<ParkingRegistration>(entity =>
@@ -124,6 +178,69 @@ public partial class ParkingManagementContext : DbContext
                 .HasForeignKey(d => d.RegistrationId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Payment__Registr__5165187F");
+        });
+
+        modelBuilder.Entity<ReportAttachment>(entity =>
+        {
+            entity.HasKey(e => e.AttachmentId).HasName("PK__ReportAt__442C64DED3AF58F8");
+
+            entity.ToTable("ReportAttachment");
+
+            entity.Property(e => e.AttachmentId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("AttachmentID");
+            entity.Property(e => e.FileName).HasMaxLength(255);
+            entity.Property(e => e.FileType).HasMaxLength(50);
+            entity.Property(e => e.FileUrl).HasMaxLength(500);
+            entity.Property(e => e.ReportId).HasColumnName("ReportID");
+            entity.Property(e => e.UploadedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.Report).WithMany(p => p.ReportAttachments)
+                .HasForeignKey(d => d.ReportId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ReportAtt__Repor__6E01572D");
+        });
+
+        modelBuilder.Entity<ReportCategory>(entity =>
+        {
+            entity.HasKey(e => e.CategoryId).HasName("PK__ReportCa__19093A2BB4B4E9F2");
+
+            entity.ToTable("ReportCategory");
+
+            entity.HasIndex(e => e.CategoryName, "UQ__ReportCa__8517B2E058DF3867").IsUnique();
+
+            entity.Property(e => e.CategoryId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("CategoryID");
+            entity.Property(e => e.CategoryName).HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(200);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<ReportComment>(entity =>
+        {
+            entity.HasKey(e => e.CommentId).HasName("PK__ReportCo__C3B4DFAAD4B247F3");
+
+            entity.ToTable("ReportComment");
+
+            entity.HasIndex(e => e.ReportId, "IDX_ReportComment_ReportID");
+
+            entity.Property(e => e.CommentId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("CommentID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ReportId).HasColumnName("ReportID");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.UserType).HasMaxLength(20);
+
+            entity.HasOne(d => d.Report).WithMany(p => p.ReportComments)
+                .HasForeignKey(d => d.ReportId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ReportCom__Repor__73BA3083");
         });
 
         modelBuilder.Entity<Staff>(entity =>

@@ -15,6 +15,7 @@ public partial class Customer
 
     public string PasswordHash { get; set; } = null!;
 
+    public virtual ICollection<CustomerReport> CustomerReports { get; set; } = new List<CustomerReport>();
+
     public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
-    
 }
