@@ -1,4 +1,11 @@
 ﻿@inherits LayoutComponentBase
+@using ParkingSystem.Client.Services
+@using System.Security.Claims
+@using ParkingSystem.Client.Shared
+@inject ParkingService ParkingService
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IAsyncDisposable
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -14,3 +21,66 @@
         </article>
     </main>
 </div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@* Toast Notification Component *@
+<ToastNotification @ref="toastNotification" />
+
+@code {
+    private ToastNotification toastNotification = default!;
+    private Guid currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+                {
+                    currentUserId = userId;
+                    await InitializeNotifications();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing notifications: {ex.Message}");
+        }
+    }
+
+    private async Task InitializeNotifications()
+    {
+        try
+        {
+            if (!ParkingService.IsConnected)
+            {
+                await ParkingService.InitializeAsync();
+            }
+
+            // Đăng ký nhận thông báo từ server
+            await ParkingService.RegisterNotificationHandler((title, message, type) =>
+            {
+                toastNotification?.ShowNotification(title, message, type);
+                return Task.CompletedTask;
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error setting up notifications: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Cleanup
+    }
+}

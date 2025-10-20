@@ -1,0 +1,125 @@
+@inject IJSRuntime JS
+
+@if (notifications.Any())
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        @foreach (var notification in notifications)
+        {
+            <div class="toast show @GetToastClass(notification.Type)" role="alert">
+                <div class="toast-header @GetHeaderClass(notification.Type)">
+                    <i class="bi @GetIcon(notification.Type) me-2"></i>
+                    <strong class="me-auto">@notification.Title</strong>
+                    <small>@notification.Timestamp.ToString("HH:mm")</small>
+                    <button type="button" class="btn-close" @onclick="() => RemoveNotification(notification.Id)"></button>
+                </div>
+                <div class="toast-body">
+                    @notification.Message
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .toast {
+        min-width: 300px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .toast-header.warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .toast-header.success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .toast-header.error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .toast-header.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+</style>
+
+@code {
+    private List<ToastMessage> notifications = new();
+    private int nextId = 0;
+
+    public void ShowNotification(string title, string message, string type = "info")
+    {
+        var notification = new ToastMessage
+        {
+            Id = nextId++,
+            Title = title,
+            Message = message,
+            Type = type,
+            Timestamp = DateTime.Now
+        };
+
+        notifications.Add(notification);
+        StateHasChanged();
+
+        // Auto dismiss sau 5 giây
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(5000);
+            RemoveNotification(notification.Id);
+        });
+
+        // Play sound nếu cần
+        _ = PlayNotificationSound();
+    }
+
+    private void RemoveNotification(int id)
+    {
+        var notification = notifications.FirstOrDefault(n => n.Id == id);
+        if (notification != null)
+        {
+            notifications.Remove(notification);
+            StateHasChanged();
+        }
+    }
+
+    private async Task PlayNotificationSound()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("playNotificationSound");
+        }
+        catch { }
+    }
+
+    private string GetToastClass(string type) => type switch
+    {
+        "warning" => "border-warning",
+        "error" => "border-danger",
+        "success" => "border-success",
+        _ => "border-info"
+    };
+
+    private string GetHeaderClass(string type) => type;
+
+    private string GetIcon(string type) => type switch
+    {
+        "warning" => "bi-exclamation-triangle-fill",
+        "error" => "bi-x-circle-fill",
+        "success" => "bi-check-circle-fill",
+        _ => "bi-info-circle-fill"
+    };
+
+    public class ToastMessage
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Type { get; set; } = "info";
+        public DateTime Timestamp { get; set; }
+    }
+}
