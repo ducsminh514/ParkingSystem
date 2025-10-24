@@ -1,0 +1,103 @@
+@page "/login"
+@using ParkingSystem.Client.Services
+@using ParkingSystem.Shared.Models
+@inject ParkingService ParkingService
+@inject SimpleAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Đăng nhập</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">🔐 Đăng nhập</h4>
+                </div>
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <EditForm Model="loginRequest" OnValidSubmit="HandleLogin">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Loại tài khoản:</label>
+                            <select class="form-select" @bind="loginRequest.IsStaff">
+                                <option value="false">👤 Khách hàng</option>
+                                <option value="true">👔 Nhân viên</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                @(loginRequest.IsStaff ? "Tên đăng nhập" : "Email/SĐT"):
+                            </label>
+                            <input type="text" class="form-control" @bind="loginRequest.UsernameOrEmail" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Mật khẩu:</label>
+                            <input type="password" class="form-control" @bind="loginRequest.Password" required />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Đăng nhập
+                        </button>
+                    </EditForm>
+
+                    <hr class="my-4" />
+                    <div class="text-center">
+                        <p class="mb-0">Chưa có tài khoản? <a href="/register" class="fw-bold">Đăng ký ngay</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginRequest = new();
+    private string? errorMessage;
+    private bool isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo SignalR connection
+        await ParkingService.InitializeAsync();
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            // ✅ Gọi qua service method
+            var result = await ParkingService.Login(loginRequest);
+
+            if (result.Success && result.UserInfo != null)
+            {
+                await AuthStateProvider.MarkUserAsAuthenticated(result.UserInfo);
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

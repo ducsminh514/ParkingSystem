@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Web;
+﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ParkingSystem.Client;
 using ParkingSystem.Client.Services;
@@ -44,3 +46,23 @@ catch (Exception ex)
 }
 
 await host.RunAsync();
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+builder.Services.AddBlazoredLocalStorage();
+
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
+builder.Services.AddScoped<SimpleAuthStateProvider>();
+builder.Services.AddScoped<CustomerService>();
+// Program.cs (Server)
+//builder.Services.AddCors(options =>
+//{
+//    options.AddDefaultPolicy(policy =>
+//    {
+//        policy.SetIsOriginAllowed(origin => true) // CHỈ dùng cho development
+//            .AllowAnyHeader()
+//            .AllowAnyMethod()
+//            .AllowCredentials();
+//    });
+//});
+await builder.Build().RunAsync();
