@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Web;
+using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ParkingSystem.Client;
 using ParkingSystem.Client.Services;
@@ -7,11 +9,25 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// HTTP Client (if needed)
+// ============================
+// HTTP Client
+// ============================
 builder.Services.AddScoped(sp => new HttpClient
 {
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
+
+// ============================
+// LocalStorage
+// ============================
+builder.Services.AddBlazoredLocalStorage();
+
+// ============================
+// Authentication & Authorization
+// ============================
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
+builder.Services.AddScoped<SimpleAuthStateProvider>();
 
 // ============================
 // SignalR Connection - SINGLETON
@@ -21,16 +37,16 @@ builder.Services.AddSingleton<ISignalRConnectionService, SignalRConnectionServic
 // ============================
 // Application Services - SCOPED
 // ============================
-builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<CustomerService>();
-// Add more services here...
-// builder.Services.AddScoped<IVehicleService, VehicleService>();
-// builder.Services.AddScoped<IParkingService, ParkingService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
+// ============================
+// Build Host
+// ============================
 var host = builder.Build();
 
 // ============================
-// Start SignalR Connection
+// Initialize SignalR Connection
 // ============================
 var connectionService = host.Services.GetRequiredService<ISignalRConnectionService>();
 try
@@ -43,4 +59,7 @@ catch (Exception ex)
     Console.WriteLine($"❌ Failed to connect to SignalR: {ex.Message}");
 }
 
+// ============================
+// Run Application
+// ============================
 await host.RunAsync();
