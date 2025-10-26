@@ -3,7 +3,7 @@
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Client.Services
 @using System.Security.Claims
-@inject ParkingService ParkingService
+@inject CustomerService CustomerService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
@@ -175,13 +175,11 @@
             {
                 currentCustomerId = customerId;
                 
-                // Initialize SignalR
-                await ParkingService.InitializeAsync();
                 
                 // Register event handlers
-                ParkingService.OnVehicleAdded += HandleVehicleAdded;
-                ParkingService.OnVehicleUpdated += HandleVehicleUpdated;
-                ParkingService.OnVehicleDeleted += HandleVehicleDeleted;
+                CustomerService.OnVehicleAdded += HandleVehicleAdded;
+                CustomerService.OnVehicleUpdated += HandleVehicleUpdated;
+                CustomerService.OnVehicleDeleted += HandleVehicleDeleted;
                 
                 // Load vehicles
                 await LoadVehicles();
@@ -206,7 +204,7 @@
         try
         {
             isLoading = true;
-            vehicles = await ParkingService.GetMyVehicles(currentCustomerId);
+            vehicles = await CustomerService.GetMyVehicles(currentCustomerId);
         }
         catch (Exception ex)
         {
@@ -254,12 +252,12 @@
 
             if (isEditMode)
             {
-                await ParkingService.UpdateVehicle(currentVehicle.VehicleId, currentVehicle.PlateNumber, currentVehicle.VehicleType ?? "");
+                await CustomerService.UpdateVehicle(currentVehicle.VehicleId, currentVehicle.PlateNumber, currentVehicle.VehicleType ?? "");
                 successMessage = "Cập nhật xe thành công!";
             }
             else
             {
-                await ParkingService.AddVehicle(currentCustomerId, currentVehicle.PlateNumber, currentVehicle.VehicleType ?? "");
+                await CustomerService.AddVehicle(currentCustomerId, currentVehicle.PlateNumber, currentVehicle.VehicleType ?? "");
                 successMessage = "Thêm xe mới thành công!";
             }
 
@@ -285,7 +283,7 @@
         {
             try
             {
-                await ParkingService.DeleteVehicle(vehicle.VehicleId);
+                await CustomerService.DeleteVehicle(vehicle.VehicleId);
                 successMessage = $"Đã xóa xe '{vehicle.PlateNumber}'";
                 await LoadVehicles();
             }
@@ -328,8 +326,8 @@
 
     public async ValueTask DisposeAsync()
     {
-        ParkingService.OnVehicleAdded -= HandleVehicleAdded;
-        ParkingService.OnVehicleUpdated -= HandleVehicleUpdated;
-        ParkingService.OnVehicleDeleted -= HandleVehicleDeleted;
+        CustomerService.OnVehicleAdded -= HandleVehicleAdded;
+        CustomerService.OnVehicleUpdated -= HandleVehicleUpdated;
+        CustomerService.OnVehicleDeleted -= HandleVehicleDeleted;
     }
 }

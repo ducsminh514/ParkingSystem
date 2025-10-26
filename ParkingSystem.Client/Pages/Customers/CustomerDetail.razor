@@ -1,7 +1,7 @@
 ﻿@page "/customers/{CustomerId:guid}"
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Client.Services
-@inject CustomerService ParkingService
+@inject CustomerService CustomerService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Chi Tiết Khách Hàng</PageTitle>
@@ -102,8 +102,7 @@
     {
         try
         {
-            await ParkingService.InitializeAsync();
-            customer = await ParkingService.GetCustomerWithFullDetailsAsync(CustomerId);
+            customer = await CustomerService.GetCustomerWithFullDetailsAsync(CustomerId);
         }
         catch (Exception ex)
         {

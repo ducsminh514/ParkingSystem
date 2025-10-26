@@ -3,17 +3,19 @@
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Client.Services
 @using System.Security.Claims
-@inject ParkingService ParkingService
+@inject CustomerService CustomerService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject SimpleAuthStateProvider SimpleAuthProvider
 @inject NavigationManager Navigation
+
+
 
 <PageTitle>Hồ sơ cá nhân</PageTitle>
 
 <div class="container mt-4">
     <h3><i class="bi bi-person-circle"></i> Hồ sơ cá nhân</h3>
 
-    @if (!string.IsNullOrEmpty(successMessage))
+    @if (!string.IsNullOrEmpty(successMessage)) 
     {
         <div class="alert alert-success alert-dismissible">
             <i class="bi bi-check-circle-fill"></i> @successMessage
@@ -221,7 +223,7 @@
     {
         try
         {
-            var vehicles = await ParkingService.GetMyVehicles(currentCustomerId);
+            var vehicles = await CustomerService.GetMyVehicles(currentCustomerId);
             vehicleCount = vehicles.Count;
             totalBookings = vehicles.Sum(v => v.ParkingRegistrations.Count);
         }
@@ -256,7 +258,7 @@
 
             if (currentCustomer != null)
             {
-                await ParkingService.UpdateCustomerAsync(currentCustomer);
+                await CustomerService.UpdateCustomerAsync(currentCustomer);
                 
                 // Update auth state với tên mới
                 var userInfo = new UserInfo

@@ -2,7 +2,7 @@
 @using ParkingSystem.Client.Services
 @using System.Security.Claims
 @using ParkingSystem.Client.Shared
-@inject ParkingService ParkingService
+@inject CustomerService CustomerService
 @inject AuthenticationStateProvider AuthStateProvider
 @implements IAsyncDisposable
 
@@ -61,13 +61,8 @@
     {
         try
         {
-            if (!ParkingService.IsConnected)
-            {
-                await ParkingService.InitializeAsync();
-            }
-
             // Đăng ký nhận thông báo từ server
-            await ParkingService.RegisterNotificationHandler((title, message, type) =>
+            await CustomerService.RegisterNotificationHandler((title, message, type) =>
             {
                 toastNotification?.ShowNotification(title, message, type);
                 return Task.CompletedTask;

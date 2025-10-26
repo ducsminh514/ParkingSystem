@@ -5,10 +5,10 @@ using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Client.Services
 {
-    public class CustomerService : IAsyncDisposable
+    public class CustomerService 
     {
-        private HubConnection? _hubConnection;
-        private readonly HttpClient _httpClient;
+        private readonly ISignalRConnectionService _connectionService;
+        private HubConnection? HubConnection => _connectionService.Connection;
         private readonly ILogger<CustomerService> _logger;
         private Func<string, string, string, Task>? _notificationHandler;
 
@@ -20,46 +20,32 @@ namespace ParkingSystem.Client.Services
         public event Func<ParkingSystem.Shared.Models.Vehicle, Task>? OnVehicleUpdated;
         public event Func<Guid, Task>? OnVehicleDeleted;
 
-        public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+        public bool IsConnected => HubConnection?.State == HubConnectionState.Connected;
 
-        public CustomerService(HttpClient httpClient, ILogger<CustomerService> logger)
+        public CustomerService(ISignalRConnectionService connectionService, ILogger<CustomerService> logger)
         {
-            _httpClient = httpClient;
+            _connectionService = connectionService;
+            RegisterEventHandlers();
             _logger = logger;
         }
 
-
-        // ============ INITIALIZE CONNECTION ============
-        public async Task InitializeAsync()
+        private void RegisterEventHandlers()
         {
-            try
-            {
-                // Sử dụng HttpClient.BaseAddress thay vì NavigationManager
-                var hubUrl = "https://localhost:7142/parkinghub";
-                _logger.LogInformation($"Connecting to SignalR hub at: {hubUrl}");
-
-
-                _hubConnection = new HubConnectionBuilder()
-                    .WithUrl(hubUrl)
-                    .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5) })
-                    .Build();
-
-                // Register event handlers for real-time updates
-                _hubConnection.On<Customer>("CustomerAdded", async (customer) =>
+                HubConnection.On<Customer>("CustomerAdded", async (customer) =>
                 {
                     _logger.LogInformation($"Real-time: Customer added - {customer.FullName}");
                     if (OnCustomerAdded != null)
                         await OnCustomerAdded.Invoke(customer);
                 });
 
-                _hubConnection.On<Customer>("CustomerUpdated", async (customer) =>
+                HubConnection.On<Customer>("CustomerUpdated", async (customer) =>
                 {
                     _logger.LogInformation($"Real-time: Customer updated - {customer.FullName}");
                     if (OnCustomerUpdated != null)
                         await OnCustomerUpdated.Invoke(customer);
                 });
 
-                _hubConnection.On<Guid>("CustomerDeleted", async (customerId) =>
+                HubConnection.On<Guid>("CustomerDeleted", async (customerId) =>
                 {
                     _logger.LogInformation($"Real-time: Customer deleted - {customerId}");
                     if (OnCustomerDeleted != null)
@@ -67,66 +53,33 @@ namespace ParkingSystem.Client.Services
                 });
 
                 // Reconnection events
-                _hubConnection.Reconnecting += error =>
+                HubConnection.Reconnecting += error =>
                 {
                     _logger.LogWarning("SignalR đang kết nối lại...");
                     return Task.CompletedTask;
                 };
-
-                _hubConnection.Reconnected += connectionId =>
-                {
-                    _logger.LogInformation($"SignalR đã kết nối lại: {connectionId}");
-                    return Task.CompletedTask;
-                };
-
-                _hubConnection.Closed += async error =>
-                {
-                    _logger.LogError(error, "SignalR connection closed");
-                    await Task.Delay(Random.Shared.Next(0, 5) * 1000);
-
-                    // Kiểm tra trạng thái trước khi reconnect
-                    if (_hubConnection.State == HubConnectionState.Disconnected)
-                    {
-                        try
-                        {
-                            await _hubConnection.StartAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to reconnect");
-                        }
-                    }
-                };
                 
-                _hubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleAdded", async (vehicle) =>
+                
+                HubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleAdded", async (vehicle) =>
                 {
                     _logger.LogInformation($"Real-time: Vehicle added - {vehicle.PlateNumber}");
                     if (OnVehicleAdded != null)
                         await OnVehicleAdded.Invoke(vehicle);
                 });
 
-                _hubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleUpdated", async (vehicle) =>
+                HubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleUpdated", async (vehicle) =>
                 {
                     _logger.LogInformation($"Real-time: Vehicle updated - {vehicle.PlateNumber}");
                     if (OnVehicleUpdated != null)
                         await OnVehicleUpdated.Invoke(vehicle);
                 });
 
-                _hubConnection.On<Guid>("VehicleDeleted", async (vehicleId) =>
+                HubConnection.On<Guid>("VehicleDeleted", async (vehicleId) =>
                 {
                     _logger.LogInformation($"Real-time: Vehicle deleted - {vehicleId}");
                     if (OnVehicleDeleted != null)
                         await OnVehicleDeleted.Invoke(vehicleId);
-                });
-
-                await _hubConnection.StartAsync();
-                _logger.LogInformation("SignalR connected successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error initializing SignalR connection");
-                throw;
-            }
+                }); 
         }
 
         // ============ CUSTOMER OPERATIONS ============
@@ -136,7 +89,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                var customers = await _hubConnection!.InvokeAsync<List<Customer>>("GetAllCustomers");
+                var customers = await HubConnection!.InvokeAsync<List<Customer>>("GetAllCustomers");
                 return customers ?? new List<Customer>();
             }
             catch (Exception ex)
@@ -151,7 +104,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<Customer?>("GetCustomerById", customerId);
+                return await HubConnection!.InvokeAsync<Customer?>("GetCustomerById", customerId);
             }
             catch (Exception ex)
             {
@@ -165,7 +118,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<Customer>("AddCustomer", customer);
+                return await HubConnection!.InvokeAsync<Customer>("AddCustomer", customer);
             }
             catch (Exception ex)
             {
@@ -179,7 +132,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<Customer>("UpdateCustomer", customer);
+                return await HubConnection!.InvokeAsync<Customer>("UpdateCustomer", customer);
             }
             catch (Exception ex)
             {
@@ -193,7 +146,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                await _hubConnection!.InvokeAsync("DeleteCustomer", customerId);
+                await HubConnection!.InvokeAsync("DeleteCustomer", customerId);
             }
             catch (Exception ex)
             {
@@ -207,7 +160,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                var customers = await _hubConnection!.InvokeAsync<List<Customer>>("SearchCustomers", keyword);
+                var customers = await HubConnection!.InvokeAsync<List<Customer>>("SearchCustomers", keyword);
                 return customers ?? new List<Customer>();
             }
             catch (Exception ex)
@@ -222,7 +175,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<Customer?>("GetCustomerWithFullDetails", customerId);
+                return await HubConnection!.InvokeAsync<Customer?>("GetCustomerWithFullDetails", customerId);
             }
             catch (Exception ex)
             {
@@ -235,7 +188,7 @@ namespace ParkingSystem.Client.Services
 
         private void EnsureConnected()
         {
-            if (_hubConnection?.State != HubConnectionState.Connected)
+            if (HubConnection?.State != HubConnectionState.Connected)
             {
                 throw new InvalidOperationException("SignalR chưa kết nối. Vui lòng thử lại.");
             }
@@ -246,7 +199,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<AuthResult>("RegisterCustomer", request);
+                return await HubConnection!.InvokeAsync<AuthResult>("RegisterCustomer", request);
             }
             catch (Exception ex)
             {
@@ -260,7 +213,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<AuthResult>("Login", request);
+                return await HubConnection!.InvokeAsync<AuthResult>("Login", request);
             }
             catch (Exception ex)
             {
@@ -271,9 +224,9 @@ namespace ParkingSystem.Client.Services
 
         public async ValueTask DisposeAsync()
         {
-            if (_hubConnection is not null)
+            if (HubConnection is not null)
             {
-                await _hubConnection.DisposeAsync();
+                await HubConnection.DisposeAsync();
             }
         }
         
@@ -282,7 +235,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<List<ParkingSystem.Shared.Models.Vehicle>>("GetMyVehicles", customerId);
+                return await HubConnection!.InvokeAsync<List<ParkingSystem.Shared.Models.Vehicle>>("GetMyVehicles", customerId);
             }
             catch (Exception ex)
             {
@@ -297,7 +250,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<ParkingSystem.Shared.Models.Vehicle>("AddVehicle", customerId, plateNumber, vehicleType);
+                return await HubConnection!.InvokeAsync<ParkingSystem.Shared.Models.Vehicle>("AddVehicle", customerId, plateNumber, vehicleType);
             }
             catch (Exception ex)
             {
@@ -312,7 +265,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<ParkingSystem.Shared.Models.Vehicle>("UpdateVehicle", vehicleId, plateNumber, vehicleType);
+                return await HubConnection!.InvokeAsync<ParkingSystem.Shared.Models.Vehicle>("UpdateVehicle", vehicleId, plateNumber, vehicleType);
             }
             catch (Exception ex)
             {
@@ -327,7 +280,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                await _hubConnection!.InvokeAsync("DeleteVehicle", vehicleId);
+                await HubConnection!.InvokeAsync("DeleteVehicle", vehicleId);
             }
             catch (Exception ex)
             {
@@ -342,7 +295,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await _hubConnection!.InvokeAsync<ParkingSystem.Shared.Models.Vehicle?>("GetVehicleDetails", vehicleId);
+                return await HubConnection!.InvokeAsync<ParkingSystem.Shared.Models.Vehicle?>("GetVehicleDetails", vehicleId);
             }
             catch (Exception ex)
             {
@@ -355,9 +308,9 @@ namespace ParkingSystem.Client.Services
             _notificationHandler = handler;
 
             // Register SignalR event
-            if (_hubConnection != null)
+            if (HubConnection != null)
             {
-                _hubConnection.On<dynamic>("ReceiveNotification", async (notification) =>
+                HubConnection.On<dynamic>("ReceiveNotification", async (notification) =>
                 {
                     string title = notification.GetProperty("Title").GetString() ?? "Thông báo";
                     string message = notification.GetProperty("Message").GetString() ?? "";

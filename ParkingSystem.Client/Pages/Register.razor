@@ -1,7 +1,7 @@
 @page "/register"
 @using ParkingSystem.Client.Services
 @using ParkingSystem.Shared.Models
-@inject ParkingService ParkingService
+@inject CustomerService CustomerService
 @inject SimpleAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
@@ -83,13 +83,7 @@
 
         try
         {
-            // Khởi tạo SignalR nếu chưa kết nối
-            if (!ParkingService.IsConnected)
-            {
-                await ParkingService.InitializeAsync();
-            }
-
-            var result = await ParkingService.RegisterCustomer(registerRequest);
+            var result = await CustomerService.RegisterCustomer(registerRequest);
 
             if (result.Success)
             {

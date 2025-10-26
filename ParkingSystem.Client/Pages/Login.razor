@@ -1,7 +1,7 @@
 @page "/login"
 @using ParkingSystem.Client.Services
 @using ParkingSystem.Shared.Models
-@inject ParkingService ParkingService
+@inject CustomerService CustomerService
 @inject SimpleAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
@@ -10,7 +10,7 @@
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-5">
-            <div class="card shadow">
+            <div class="card shadow" >
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0">🔐 Đăng nhập</h4>
                 </div>
@@ -67,8 +67,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Khởi tạo SignalR connection
-        await ParkingService.InitializeAsync();
+        
     }
 
     private async Task HandleLogin()
@@ -79,7 +78,7 @@
         try
         {
             // ✅ Gọi qua service method
-            var result = await ParkingService.Login(loginRequest);
+            var result = await CustomerService.Login(loginRequest);
 
             if (result.Success && result.UserInfo != null)
             {
