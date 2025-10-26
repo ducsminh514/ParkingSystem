@@ -18,5 +18,4 @@ public partial class Customer
     public virtual ICollection<CustomerReport> CustomerReports { get; set; } = new List<CustomerReport>();
 
     public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
-    
 }
