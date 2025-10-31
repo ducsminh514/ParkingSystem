@@ -25,20 +25,43 @@ public class NotificationBackgroundService : BackgroundService
     {
         _logger.LogInformation("Notification Background Service started");
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await CheckExpiringRegistrations();
+                try
+                {
+                    await CheckExpiringRegistrations();
                 
-                // Chạy mỗi 30 phút
-                await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                    // Wait for 30 minutes or until cancellation is requested
+                    await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                }
+                catch (TaskCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    // Graceful shutdown
+                    _logger.LogInformation("Notification Background Service is stopping due to application shutdown");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in Notification Background Service");
+                
+                    // Wait before retrying, but respect cancellation
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Exit the loop if cancellation is requested during the delay
+                        break;
+                    }
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in Notification Background Service");
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
-            }
+        }
+        finally
+        {
+            _logger.LogInformation("Notification Background Service has stopped");
         }
     }
 

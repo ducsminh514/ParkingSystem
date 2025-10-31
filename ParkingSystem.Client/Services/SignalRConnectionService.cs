@@ -28,7 +28,7 @@ namespace ParkingSystem.Client.Services
         {
             // Configure connection
             _connection = new HubConnectionBuilder()
-                .WithUrl("https://localhost:7142/parkinghub") // Thay bằng URL server của bạn
+                .WithUrl("https://localhost:7143/parkinghub") // Thay bằng URL server của bạn
                 .WithAutomaticReconnect() // Tự động reconnect khi mất kết nối
                 .Build();
 

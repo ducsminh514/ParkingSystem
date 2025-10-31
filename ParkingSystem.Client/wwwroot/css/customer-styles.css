@@ -1,0 +1,205 @@
+/* ============================================ */
+/*      CUSTOMER PAGE MODERN STYLES            */
+/* ============================================ */
+
+.customer-page .page-title {
+    font-weight: 700;
+    color: #1F2937;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.customer-page .page-title i {
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2rem;
+}
+
+/* Table improvements */
+.customer-page .table {
+    background: white;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.customer-page .table thead th {
+    background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+    color: #374151;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1.25rem 1rem;
+    border: none;
+}
+
+.customer-page .table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.customer-page .table-hover tbody tr:hover {
+    background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
+    transform: scale(1.005);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.customer-page .table tbody td {
+    padding: 1.25rem 1rem;
+    vertical-align: middle;
+    color: #374151;
+}
+
+.customer-page .table tbody td strong {
+    color: #1F2937;
+    font-weight: 600;
+}
+
+/* Button group improvements */
+.customer-page .btn-group .btn {
+    transition: all 0.2s ease;
+    border-width: 1.5px;
+}
+
+.customer-page .btn-group .btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Search bar improvements */
+.customer-page .input-group {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.customer-page .input-group .input-group-text {
+    background: white;
+    border: 2px solid #E5E7EB;
+    border-right: none;
+    color: #6B7280;
+}
+
+.customer-page .input-group .form-control {
+    border-left: none;
+}
+
+.customer-page .input-group .form-control:focus {
+    border-left: none;
+}
+
+/* Badge improvements */
+.customer-page .badge {
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
+/* Card improvements */
+.customer-page .card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: white;
+}
+
+.customer-page .card-body {
+    padding: 2rem;
+}
+
+/* Modal improvements */
+.customer-page .modal-content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.customer-page .modal-header {
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-bottom: none;
+}
+
+.customer-page .modal-header .modal-title {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.customer-page .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.customer-page .modal-body {
+    padding: 2rem;
+}
+
+.customer-page .modal-footer {
+    padding: 1.5rem 2rem;
+    background: #F9FAFB;
+    border-top: 2px solid #E5E7EB;
+}
+
+/* Form improvements */
+.customer-page .form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.customer-page .form-control,
+.customer-page .form-select {
+    border-radius: 0.5rem;
+    border: 2px solid #E5E7EB;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.customer-page .form-control:focus,
+.customer-page .form-select:focus {
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Empty state */
+.customer-page .text-center.py-5 i.bi-inbox {
+    font-size: 4rem;
+    color: #D1D5DB;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+/* Animation */
+.customer-page {
+    animation: fadeInUp 0.6s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading state */
+.customer-page .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.25em;
+    color: #4F46E5;
+}
+

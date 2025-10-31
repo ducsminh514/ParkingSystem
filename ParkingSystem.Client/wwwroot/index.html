@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ParkingSystem.Client</title>
+    <meta name="description" content="Hệ thống quản lý bãi đỗ xe thông minh - Modern Parking Management System" />
+    <meta name="theme-color" content="#4F46E5" />
+    <title>Parking System - Quản Lý Bãi Đỗ Xe</title>
     <base href="/" />
+    
+    <!-- Bootstrap & Icons -->
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/customer-styles.css" />
+    
+    <!-- Icons & Manifest -->
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="ParkingSystem.Client.styles.css" rel="stylesheet" />
     <link href="manifest.webmanifest" rel="manifest" />
@@ -29,6 +39,13 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+    
+    <!-- Bootstrap JS Bundle (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS Helpers -->
+    <script src="js/slotHelpers.js"></script>
+    
     <script src="_framework/blazor.webassembly.js"></script>
     <script>navigator.serviceWorker.register('service-worker.js');</script>
 </body>
