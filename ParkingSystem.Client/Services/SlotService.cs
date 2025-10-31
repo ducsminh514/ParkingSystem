@@ -25,6 +25,7 @@ namespace ParkingSystem.Client.Services
             RegisterEventHandlers();
         }
 
+
         private void RegisterEventHandlers()
         {
             // Listen to slot updates
