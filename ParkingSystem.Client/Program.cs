@@ -28,7 +28,7 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
 builder.Services.AddScoped<SimpleAuthStateProvider>();
-
+builder.Services.AddScoped<UserService>();
 // ============================
 // SignalR Connection - SINGLETON
 // ============================
@@ -39,7 +39,7 @@ builder.Services.AddSingleton<ISignalRConnectionService, SignalRConnectionServic
 // ============================
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<IReportService, ReportService>();
-
+builder.Services.AddScoped<SlotService>();
 // ============================
 // Build Host
 // ============================

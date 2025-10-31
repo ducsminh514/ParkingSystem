@@ -4,7 +4,7 @@
 @inject IReportService ReportService
 @inject NavigationManager Navigation
 @implements IDisposable
-
+@inject UserService UserService
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>My Reports</h2>
@@ -192,13 +192,13 @@
     private Guid ratingReportId;
     private int selectedRating = 0;
 
-    private Guid currentCustomerId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private Guid currentCustomerId ;
 
     protected override async Task OnInitializedAsync()
     {
         // Subscribe to real-time events
         ReportService.OnReportStatusUpdated += HandleReportStatusUpdated;
-
+		currentCustomerId = await UserService.GetCurrentUserId();
         await LoadReports();
     }
 

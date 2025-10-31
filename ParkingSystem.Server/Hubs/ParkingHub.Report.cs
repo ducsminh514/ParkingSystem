@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
 
@@ -31,19 +31,31 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
+                // Validate customer exists
+                var customerExists = await _context.Customers
+                    .AnyAsync(c => c.CustomerId == report.CustomerId);
+                
+                if (!customerExists)
+                {
+                    throw new HubException($"Customer with ID {report.CustomerId} does not exist");
+                }
+
+                // Validate category exists
+                var categoryExists = await _context.ReportCategories
+                    .AnyAsync(c => c.CategoryId == report.CategoryId);
+                
+                if (!categoryExists)
+                {
+                    throw new HubException($"Category with ID {report.CategoryId} does not exist");
+                }
+
                 report.ReportId = Guid.NewGuid();
                 report.Status = "Pending";
                 report.CreatedDate = DateTime.Now;
+                
+                _context.CustomerReports.Add(report);
+                await _context.SaveChangesAsync();
 
-                try
-                {
-                    _context.CustomerReports.Add(report);
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Loiix choox nayf :   "+e);
-                }
                 // Load related data
                 var createdReport = await _context.CustomerReports
                     .Include(r => r.Customer)

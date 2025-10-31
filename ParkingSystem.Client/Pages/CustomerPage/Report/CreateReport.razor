@@ -1,10 +1,10 @@
-﻿@page "/reports/create"
+@page "/reports/create"
 @using System.ComponentModel.DataAnnotations
 @using ParkingSystem.Client.Services
 @using ParkingSystem.Shared.Models
 @inject IReportService ReportService
 @inject NavigationManager Navigation
-
+@inject UserService UserService
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -194,7 +194,7 @@
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
-    private Guid currentCustomerId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private Guid currentCustomerId ;
 
     private ReportCategory? selectedCategory => 
         model.CategoryID != Guid.Empty 
@@ -204,6 +204,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadCategories();
+        currentCustomerId = await UserService.GetCurrentUserId();
     }
 
     private async Task LoadCategories()

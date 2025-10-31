@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Client.Services
