@@ -483,6 +483,7 @@ namespace ParkingSystem.Server.Hubs
                     .Include(s => s.ParkingRegistrations
                         .Where(r => r.Status == "Active" || r.Status == "CheckedIn"))
                     .ThenInclude(r => r.Vehicle)
+                    .ThenInclude(v => v.Customer)
                     .OrderBy(s => s.SlotCode)
                     .ToListAsync();
 
