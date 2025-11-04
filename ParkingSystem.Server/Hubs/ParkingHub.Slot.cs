@@ -531,7 +531,7 @@ namespace ParkingSystem.Server.Hubs
                 _logger.LogError(ex, "Lỗi khi lấy slots cho Customer");
                 throw new HubException($"Error getting slots: {ex.Message}");
             }
-        }
+            }
 
         /// <summary>
         /// Lấy tổng quan parking cho Customer - Chỉ số liệu thống kê
