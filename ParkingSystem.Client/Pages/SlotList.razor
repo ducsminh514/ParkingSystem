@@ -3,6 +3,8 @@
 @using ParkingSystem.Shared.DTOs
 @using ParkingSystem.Client.Services
 @inject SlotService SlotService
+@inject UserService UserService
+@inject CustomerService CustomerService
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
@@ -96,7 +98,7 @@
             <p class="mt-2">Đang tải dữ liệu chỗ đỗ xe...</p>
         </div>
     }
-    else if (parkingAreas.Count == 0)
+    else if ((isStaff && parkingAreas.Count == 0) || (!isStaff && customerParkingAreas.Count == 0))
     {
         <div class="text-center py-5">
             <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
@@ -105,85 +107,174 @@
     }
     else
     {
-        <!-- Hiển thị theo từng khu vực -->
-        @foreach (var area in parkingAreas)
+        @if (isStaff)
         {
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h5 class="mb-0">
-                                <i class="bi bi-building"></i> @area.AreaName
-                            </h5>
+            <!-- STAFF VIEW: Hiển thị đầy đủ thông tin -->
+            @foreach (var area in parkingAreas)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-building"></i> @area.AreaName
+                                </h5>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge bg-success me-2">
+                                    <i class="bi bi-check-circle"></i> Trống: @area.AvailableSlots
+                                </span>
+                                <span class="badge bg-danger me-2">
+                                    <i class="bi bi-x-circle"></i> Đã dùng: @area.OccupiedSlots
+                                </span>
+                                <span class="badge bg-info">
+                                    Tỷ lệ: @area.OccupancyRate%
+                                </span>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <span class="badge bg-success me-2">
-                                <i class="bi bi-check-circle"></i> Trống: @area.AvailableSlots
-                            </span>
-                            <span class="badge bg-danger me-2">
-                                <i class="bi bi-x-circle"></i> Đã dùng: @area.OccupiedSlots
-                            </span>
-                            <span class="badge bg-info">
-                                Tỷ lệ: @area.OccupancyRate%
-                            </span>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div class="progress-bar bg-danger" 
+                                 role="progressbar" 
+                                 style="width: @(area.OccupancyRate)%"
+                                 aria-valuenow="@area.OccupancyRate" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
                         </div>
                     </div>
-                    <!-- Progress bar -->
-                    <div class="progress mt-2" style="height: 8px;">
-                        <div class="progress-bar bg-danger" 
-                             role="progressbar" 
-                             style="width: @(area.OccupancyRate)%"
-                             aria-valuenow="@area.OccupancyRate" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Grid hiển thị các slot -->
-                    <div class="parking-grid">
-                        @foreach (var slot in area.Slots)
-                        {
-                            <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied")"
-                                 @onclick="() => OpenSlotModal(slot)"
-                                 title="Click để xem chi tiết">
-                                <div class="slot-icon">
-                                    @if (slot.IsAvailable)
-                                    {
-                                        <i class="bi bi-p-square"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-car-front-fill"></i>
-                                    }
-                                </div>
-                                <div class="slot-code">@slot.SlotCode</div>
-                                
-                                @if (!slot.IsAvailable && !string.IsNullOrEmpty(slot.VehiclePlateNumber))
-                                {
-                                    <div class="slot-info">
-                                        <small class="d-block text-truncate fw-bold">
-                                            <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
-                                        </small>
-                                        @if (!string.IsNullOrEmpty(slot.CustomerName))
+                    <div class="card-body">
+                        <div class="parking-grid">
+                            @foreach (var slot in area.Slots)
+                            {
+                                <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied")"
+                                     @onclick="() => OpenSlotModal(slot)"
+                                     title="Click để xem chi tiết">
+                                    <div class="slot-icon">
+                                        @if (slot.IsAvailable)
                                         {
-                                            <small class="d-block text-truncate">
-                                                <i class="bi bi-person"></i> @slot.CustomerName
-                                            </small>
+                                            <i class="bi bi-p-square"></i>
                                         }
-                                        @if (slot.CheckInTime.HasValue)
+                                        else
                                         {
-                                            <small class="d-block">
-                                                <i class="bi bi-clock"></i> @slot.ParkingDuration
-                                            </small>
+                                            <i class="bi bi-car-front-fill"></i>
                                         }
                                     </div>
-                                }
-                            </div>
-                        }
+                                    <div class="slot-code">@slot.SlotCode</div>
+                                    
+                                    @if (!slot.IsAvailable && !string.IsNullOrEmpty(slot.VehiclePlateNumber))
+                                    {
+                                        <div class="slot-info">
+                                            <small class="d-block text-truncate fw-bold">
+                                                <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
+                                            </small>
+                                            @if (!string.IsNullOrEmpty(slot.CustomerName))
+                                            {
+                                                <small class="d-block text-truncate">
+                                                    <i class="bi bi-person"></i> @slot.CustomerName
+                                                </small>
+                                            }
+                                            @if (slot.CheckInTime.HasValue)
+                                            {
+                                                <small class="d-block">
+                                                    <i class="bi bi-clock"></i> @slot.ParkingDuration
+                                                </small>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
+        }
+        else
+        {
+            <!-- CUSTOMER VIEW: Chỉ hiển thị trạng thái slot -->
+            @foreach (var area in customerParkingAreas)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-building"></i> @area.AreaName
+                                </h5>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge bg-success me-2">
+                                    <i class="bi bi-check-circle"></i> Trống: @area.AvailableSlots
+                                </span>
+                                <span class="badge bg-danger me-2">
+                                    <i class="bi bi-x-circle"></i> Đã dùng: @area.OccupiedSlots
+                                </span>
+                                <span class="badge bg-info">
+                                    Tỷ lệ: @area.OccupancyRate%
+                                </span>
+                            </div>
+                        </div>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div class="progress-bar bg-danger" 
+                                 role="progressbar" 
+                                 style="width: @(area.OccupancyRate)%"
+                                 aria-valuenow="@area.OccupancyRate" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="parking-grid">
+                            @foreach (var slot in area.Slots)
+                            {
+                                <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied")"
+                                     @onclick="() => OpenCustomerSlotModal(slot)"
+                                     title="Click để xem chi tiết">
+                                    <div class="slot-icon">
+                                        @if (slot.IsAvailable)
+                                        {
+                                            <i class="bi bi-p-square"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-car-front-fill"></i>
+                                        }
+                                    </div>
+                                    <div class="slot-code">@slot.SlotCode</div>
+                                    
+                                    @if (!slot.IsAvailable)
+                                    {
+                                        @if (slot.IsMySlot)
+                                        {
+                                            <!-- Slot của chính customer này - Hiển thị thông tin đầy đủ -->
+                                            <div class="slot-info">
+                                                <small class="d-block text-truncate fw-bold">
+                                                    <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
+                                                </small>
+                                                @if (slot.CheckInTime.HasValue)
+                                                {
+                                                    <small class="d-block">
+                                                        <i class="bi bi-clock"></i> @slot.ParkingDuration
+                                                    </small>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <!-- Slot của người khác - Chỉ hiển thị "Đã được đăng ký" -->
+                                            <div class="slot-info">
+                                                <small class="d-block text-center text-muted">
+                                                    <i class="bi bi-lock-fill"></i> Đã được đăng ký
+                                                </small>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
         }
     }
 </div>
@@ -191,8 +282,9 @@
 <!-- Modal Chi Tiết & Đăng Ký Slot -->
 <div class="modal fade" id="slotModal" tabindex="-1" aria-labelledby="slotModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        @if (selectedSlot != null)
+        @if (isStaff && selectedSlot != null)
         {
+            <!-- STAFF MODAL: Hiển thị đầy đủ thông tin -->
             <div class="modal-content">
                 <div class="modal-header @(selectedSlot.IsAvailable ? "bg-success" : "bg-danger") text-white">
                     <h5 class="modal-title">
@@ -203,7 +295,7 @@
                 <div class="modal-body">
                     @if (selectedSlot.IsAvailable)
                     {
-                        <!-- Slot trống - Form đăng ký -->
+                        <!-- Slot trống - Form đăng ký cho Staff -->
                         <div class="alert alert-success">
                             <i class="bi bi-check-circle-fill"></i> Chỗ đỗ này đang trống và có thể sử dụng
                         </div>
@@ -248,7 +340,7 @@
                     }
                     else
                     {
-                        <!-- Slot đang được sử dụng - Hiển thị thông tin -->
+                        <!-- Slot đang được sử dụng - Staff xem được thông tin đầy đủ -->
                         <div class="alert alert-danger">
                             <i class="bi bi-x-circle-fill"></i> Chỗ đỗ này đang được sử dụng
                         </div>
@@ -325,6 +417,202 @@
                         </button>
                     }
                     else
+                    {
+                        <button type="button" class="btn btn-danger" @onclick="HandleCheckOut" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Check Out</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+        else if (!isStaff && selectedCustomerSlot != null)
+        {
+            <!-- CUSTOMER MODAL: Chỉ hiển thị trạng thái, không có thông tin cá nhân -->
+            <div class="modal-content">
+                <div class="modal-header @(selectedCustomerSlot.IsAvailable ? "bg-success" : "bg-danger") text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-info-circle"></i> Chi Tiết Chỗ Đỗ - @selectedCustomerSlot.SlotCode
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedCustomerSlot.IsAvailable)
+                    {
+                        <!-- Slot trống - Form đăng ký cho Customer với auto-fill -->
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill"></i> Chỗ đỗ này đang trống và có thể đăng ký
+                        </div>
+                        
+                        <h6 class="mb-3"><i class="bi bi-clipboard-plus"></i> Đăng Ký Chỗ Đỗ</h6>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Họ Tên</label>
+                                <input type="text" class="form-control" @bind="registrationForm.CustomerName" placeholder="Nhập họ tên" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Số Điện Thoại</label>
+                                <input type="tel" class="form-control" @bind="registrationForm.CustomerPhone" placeholder="Nhập số điện thoại" />
+                            </div>
+                            
+                            @if (customerVehicles.Count > 0)
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-success">
+                                        <i class="bi bi-car-front-fill"></i> <strong>Xe của bạn</strong> - Chọn nhanh từ danh sách xe đã đăng ký
+                                    </div>
+                                    <label class="form-label fw-bold text-primary">
+                                        <i class="bi bi-list-check"></i> Chọn Xe Có Sẵn
+                                    </label>
+                                    <select class="form-select form-select-lg" @onchange="OnVehicleSelected">
+                                        <option value="">-- Chọn xe hoặc nhập xe mới bên dưới --</option>
+                                        @foreach (var vehicle in customerVehicles)
+                                        {
+                                            <option value="@vehicle.VehicleId">
+                                                🚗 @vehicle.PlateNumber - @vehicle.VehicleType
+                                            </option>
+                                        }
+                                    </select>
+                                    <small class="text-muted mt-1 d-block">
+                                        <i class="bi bi-info-circle"></i> Chọn xe đã đăng ký để tự động điền thông tin
+                                    </small>
+                                </div>
+                                <div class="col-12">
+                                    <div class="text-center my-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-arrow-down-short"></i> hoặc nhập thông tin xe mới <i class="bi bi-arrow-down-short"></i>
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Biển Số Xe</label>
+                                <input type="text" class="form-control" @bind="registrationForm.PlateNumber" placeholder="Nhập biển số" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Loại Xe</label>
+                                <select class="form-select" @bind="registrationForm.VehicleType">
+                                    <option value="">-- Chọn loại xe --</option>
+                                    <option value="Xe máy">Xe máy</option>
+                                    <option value="Ô tô">Ô tô</option>
+                                    <option value="Xe đạp">Xe đạp</option>
+                                    <option value="Xe tải">Xe tải</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Email (tùy chọn)</label>
+                                <input type="email" class="form-control" @bind="registrationForm.CustomerEmail" placeholder="Nhập email" />
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle"></i> Thông tin cá nhân đã được tự động điền. Bạn có thể chỉnh sửa nếu cần.
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(registrationError))
+                        {
+                            <div class="alert alert-danger mt-3">
+                                <i class="bi bi-exclamation-triangle-fill"></i> @registrationError
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <!-- Slot đã được đăng ký -->
+                        @if (selectedCustomerSlot.IsMySlot)
+                        {
+                            <!-- Slot của chính customer này - Hiển thị đầy đủ thông tin -->
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill"></i> Đây là chỗ đỗ mà bạn đã đăng ký
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Biển Số Xe</label>
+                                        <div class="fw-bold fs-5">
+                                            <i class="bi bi-credit-card-2-front text-primary"></i> @selectedCustomerSlot.VehiclePlateNumber
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Loại Xe</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-car-front text-primary"></i> @(selectedCustomerSlot.VehicleType ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Số Điện Thoại</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-telephone text-success"></i> @(selectedCustomerSlot.CustomerPhone ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Thời Gian Vào</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-clock-history text-info"></i> @(selectedCustomerSlot.CheckInTime?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Thời Gian Đỗ</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-hourglass-split text-warning"></i> @(selectedCustomerSlot.ParkingDuration ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Slot của người khác - KHÔNG hiển thị thông tin -->
+                            <div class="alert alert-danger">
+                                <i class="bi bi-lock-fill"></i> Chỗ đỗ này đã được đăng ký bởi người khác
+                            </div>
+                            
+                            <div class="text-center py-4">
+                                <i class="bi bi-shield-lock" style="font-size: 4rem; color: #6c757d;"></i>
+                                <p class="text-muted mt-3">Thông tin chi tiết chỉ dành cho chủ sở hữu và nhân viên quản lý</p>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Đóng
+                    </button>
+                    @if (selectedCustomerSlot.IsAvailable)
+                    {
+                        <button type="button" class="btn btn-success" @onclick="SubmitRegistration" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-lg"></i>
+                                <span>Đăng Ký</span>
+                            }
+                        </button>
+                    }
+                    else if (selectedCustomerSlot.IsMySlot)
                     {
                         <button type="button" class="btn btn-danger" @onclick="HandleCheckOut" disabled="@isSubmitting">
                             @if (isSubmitting)
@@ -615,20 +903,31 @@
 
 @code {
     private List<ParkingAreaDto> parkingAreas = new();
+    private List<CustomerParkingAreaDto> customerParkingAreas = new();
     private ParkingOverviewDto? overview;
     private bool isLoading = true;
     private string errorMessage = string.Empty;
 
+    // User info
+    private UserInfo? currentUser = null;
+    private bool isStaff = false;
+
     // Modal state
     private ParkingSlotDto? selectedSlot = null;
+    private CustomerParkingSlotDto? selectedCustomerSlot = null;
     private string registrationError = string.Empty;
     private bool isSubmitting = false;
     
     // Registration form
     private RegistrationFormModel registrationForm = new();
+    private List<ParkingSystem.Shared.Models.Vehicle> customerVehicles = new();
 
     protected override async Task OnInitializedAsync()
     {
+        // Get current user info
+        currentUser = await UserService.GetCurrentUser();
+        isStaff = currentUser?.UserType == "Staff";
+
         // Register real-time event handlers
         SlotService.OnSlotUpdated += HandleSlotUpdated;
         SlotService.OnParkingRegistered += HandleParkingRegistered;
@@ -688,7 +987,7 @@
     {
         // Refresh the specific slot or reload all data
         await LoadParkingData();
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadParkingData()
@@ -698,14 +997,57 @@
             isLoading = true;
             errorMessage = string.Empty;
 
-            // Tải tổng quan và danh sách slots
-            var overviewTask = SlotService.GetParkingOverviewAsync();
-            var areasTask = SlotService.GetSlotsByAreaAsync();
+            // Kiểm tra kết nối SignalR
+            if (!SlotService.IsConnected)
+            {
+                errorMessage = "Đang kết nối tới server...";
+                StateHasChanged();
+                
+                // Thử kết nối lại
+                bool reconnected = await SlotService.TryReconnectAsync();
+                if (!reconnected)
+                {
+                    errorMessage = "Không thể kết nối tới server. Vui lòng kiểm tra server đã chạy chưa và thử lại.";
+                    return;
+                }
+                
+                errorMessage = string.Empty;
+            }
 
-            await Task.WhenAll(overviewTask, areasTask);
+            // Tải dữ liệu khác nhau tùy theo role
+            if (isStaff)
+            {
+                // Staff: Lấy đầy đủ thông tin
+                var overviewTask = SlotService.GetParkingOverviewAsync();
+                var areasTask = SlotService.GetSlotsByAreaAsync();
 
-            overview = await overviewTask;
-            parkingAreas = await areasTask;
+                await Task.WhenAll(overviewTask, areasTask);
+
+                overview = await overviewTask;
+                parkingAreas = await areasTask;
+            }
+            else
+            {
+                // Customer: Lấy thông tin với chi tiết của slot của chính họ
+                if (currentUser != null)
+                {
+                    var overviewTask = SlotService.GetParkingOverviewForCustomerAsync();
+                    var areasTask = SlotService.GetSlotsByAreaForCustomerAsync(currentUser.UserId);
+
+                    await Task.WhenAll(overviewTask, areasTask);
+
+                    overview = await overviewTask;
+                    customerParkingAreas = await areasTask;
+                }
+                else
+                {
+                    errorMessage = "Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.";
+                }
+            }
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("SignalR"))
+        {
+            errorMessage = "Mất kết nối server. Vui lòng kiểm tra server và nhấn 'Làm mới' để thử lại.";
         }
         catch (Exception ex)
         {
@@ -731,16 +1073,88 @@
         if (slot.IsAvailable)
         {
             registrationForm = new RegistrationFormModel();
+            
+            // Nếu là customer, auto-fill thông tin
+            if (!isStaff && currentUser != null)
+            {
+                registrationForm.CustomerName = currentUser.FullName;
+                registrationForm.CustomerPhone = currentUser.Phone ?? string.Empty;
+                registrationForm.CustomerEmail = currentUser.Email ?? string.Empty;
+            }
         }
 
         // Show modal using Bootstrap
         await JSRuntime.InvokeVoidAsync("slotHelpers.showModal", "slotModal");
     }
 
+    private async Task OpenCustomerSlotModal(CustomerParkingSlotDto slot)
+    {
+        selectedCustomerSlot = slot;
+        registrationError = string.Empty;
+        
+        // Reset và auto-fill form nếu slot trống
+        if (slot.IsAvailable)
+        {
+            registrationForm = new RegistrationFormModel();
+            
+            // Auto-fill thông tin customer hiện tại
+            if (currentUser != null)
+            {
+                registrationForm.CustomerName = currentUser.FullName;
+                registrationForm.CustomerPhone = currentUser.Phone ?? string.Empty;
+                registrationForm.CustomerEmail = currentUser.Email ?? string.Empty;
+                
+                // Load danh sách xe của customer
+                await LoadCustomerVehicles();
+            }
+        }
+
+        // Show modal using Bootstrap
+        await JSRuntime.InvokeVoidAsync("slotHelpers.showModal", "slotModal");
+    }
+
+    private async Task LoadCustomerVehicles()
+    {
+        if (currentUser == null) return;
+        
+        try
+        {
+            customerVehicles = await CustomerService.GetMyVehicles(currentUser.UserId);
+        }
+        catch (Exception)
+        {
+            // Nếu lỗi, để list rỗng và user có thể nhập mới
+            customerVehicles = new List<ParkingSystem.Shared.Models.Vehicle>();
+        }
+    }
+
+    private void OnVehicleSelected(ChangeEventArgs e)
+    {
+        var vehicleIdStr = e.Value?.ToString();
+        if (string.IsNullOrEmpty(vehicleIdStr))
+        {
+            // Clear vehicle fields if "none" selected
+            registrationForm.PlateNumber = string.Empty;
+            registrationForm.VehicleType = string.Empty;
+            return;
+        }
+
+        if (Guid.TryParse(vehicleIdStr, out var vehicleId))
+        {
+            var selectedVehicle = customerVehicles.FirstOrDefault(v => v.VehicleId == vehicleId);
+            if (selectedVehicle != null)
+            {
+                registrationForm.PlateNumber = selectedVehicle.PlateNumber ?? string.Empty;
+                registrationForm.VehicleType = selectedVehicle.VehicleType ?? string.Empty;
+            }
+        }
+    }
+
     private async Task CloseModal()
     {
         await JSRuntime.InvokeVoidAsync("slotHelpers.hideModal", "slotModal");
         selectedSlot = null;
+        selectedCustomerSlot = null;
         registrationError = string.Empty;
     }
 
@@ -754,7 +1168,7 @@
             // Validate form
             if (string.IsNullOrWhiteSpace(registrationForm.CustomerName))
             {
-                registrationError = "Vui lòng nhập họ tên khách hàng";
+                registrationError = "Vui lòng nhập họ tên";
                 return;
             }
 
@@ -776,15 +1190,50 @@
                 return;
             }
 
+            // Kiểm tra kết nối trước khi đăng ký
+            if (!SlotService.IsConnected)
+            {
+                registrationError = "Đang thử kết nối lại server...";
+                StateHasChanged();
+                
+                bool reconnected = await SlotService.TryReconnectAsync();
+                if (!reconnected)
+                {
+                    registrationError = "Không thể kết nối tới server. Vui lòng kiểm tra server đã chạy chưa.";
+                    return;
+                }
+            }
+
+            // Get SlotId from appropriate slot object
+            Guid slotId;
+            string slotCode;
+            
+            if (isStaff && selectedSlot != null)
+            {
+                slotId = selectedSlot.SlotId;
+                slotCode = selectedSlot.SlotCode;
+            }
+            else if (!isStaff && selectedCustomerSlot != null)
+            {
+                slotId = selectedCustomerSlot.SlotId;
+                slotCode = selectedCustomerSlot.SlotCode;
+            }
+            else
+            {
+                registrationError = "Không tìm thấy thông tin slot";
+                return;
+            }
+
             // Call API to register parking
             var request = new RegisterParkingRequest
             {
-                SlotId = selectedSlot!.SlotId,
+                SlotId = slotId,
                 CustomerName = registrationForm.CustomerName,
                 CustomerPhone = registrationForm.CustomerPhone,
                 CustomerEmail = registrationForm.CustomerEmail,
                 PlateNumber = registrationForm.PlateNumber,
-                VehicleType = registrationForm.VehicleType
+                VehicleType = registrationForm.VehicleType,
+                CustomerId = !isStaff && currentUser != null ? currentUser.UserId : null  // Pass CustomerId if customer
             };
 
             var response = await SlotService.RegisterParkingAsync(request);
@@ -792,7 +1241,7 @@
             if (response.Success)
             {
                 // Show success message
-                await ShowToast($"Đăng ký thành công cho chỗ đỗ {selectedSlot.SlotCode}!");
+                await ShowToast($"Đăng ký thành công cho chỗ đỗ {slotCode}!");
                 
                 // Close modal
                 await CloseModal();
@@ -804,6 +1253,10 @@
             {
                 registrationError = response.Message;
             }
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("SignalR"))
+        {
+            registrationError = "Mất kết nối server. Vui lòng kiểm tra server và thử lại.";
         }
         catch (Exception ex)
         {
@@ -817,14 +1270,29 @@
 
     private async Task HandleCheckOut()
     {
-        if (selectedSlot?.CurrentRegistrationId == null)
+        // Get registration ID from appropriate slot object
+        Guid? registrationId = null;
+        string? vehiclePlate = null;
+
+        if (isStaff && selectedSlot?.CurrentRegistrationId != null)
+        {
+            registrationId = selectedSlot.CurrentRegistrationId;
+            vehiclePlate = selectedSlot.VehiclePlateNumber;
+        }
+        else if (!isStaff && selectedCustomerSlot?.CurrentRegistrationId != null)
+        {
+            registrationId = selectedCustomerSlot.CurrentRegistrationId;
+            vehiclePlate = selectedCustomerSlot.VehiclePlateNumber;
+        }
+
+        if (registrationId == null)
         {
             await ShowToast("Không tìm thấy thông tin đăng ký", false);
             return;
         }
 
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
-            $"Bạn có chắc muốn check out cho xe {selectedSlot.VehiclePlateNumber}?");
+            $"Bạn có chắc muốn check out cho xe {vehiclePlate}?");
 
         if (!confirmed)
             return;
@@ -835,7 +1303,7 @@
 
             var request = new CheckOutRequest
             {
-                RegistrationId = selectedSlot.CurrentRegistrationId.Value,
+                RegistrationId = registrationId.Value,
                 PaymentAmount = 50000, // TODO: Calculate based on duration
                 PaymentMethod = "Cash"
             };

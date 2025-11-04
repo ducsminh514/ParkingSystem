@@ -16,6 +16,8 @@ namespace ParkingSystem.Client.Services
         public event Action<RegisterParkingResponse>? OnParkingRegistered;
         public event Action<Guid>? OnSlotCheckedOut;
 
+        public bool IsConnected => Connection?.State == HubConnectionState.Connected;
+
         public SlotService(ISignalRConnectionService signalRConnectionService, ILogger<SlotService> logger)
         {
             _signalRConnectionService = signalRConnectionService;
@@ -49,10 +51,41 @@ namespace ParkingSystem.Client.Services
             });
         }
 
-        // ============ PARKING SLOT OPERATIONS ============
+        // ============ HELPER METHODS ============
+
+        private void EnsureConnected()
+        {
+            if (Connection?.State != HubConnectionState.Connected)
+            {
+                _logger.LogError("SignalR chưa kết nối. State: {State}", Connection?.State);
+                throw new InvalidOperationException($"SignalR chưa kết nối. Trạng thái hiện tại: {Connection?.State}. Vui lòng kiểm tra kết nối server và thử lại.");
+            }
+        }
+
+        public async Task<bool> TryReconnectAsync()
+        {
+            try
+            {
+                if (Connection.State == HubConnectionState.Disconnected)
+                {
+                    _logger.LogInformation("Attempting to reconnect SignalR...");
+                    await _signalRConnectionService.StartAsync();
+                    return true;
+                }
+                return Connection.State == HubConnectionState.Connected;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to reconnect SignalR");
+                return false;
+            }
+        }
+
+        // ============ PARKING SLOT OPERATIONS (STAFF) ============
 
         public async Task<List<ParkingSlotDto>> GetAllSlotsAsync()
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<List<ParkingSlotDto>>("GetAllSlots");
@@ -64,8 +97,12 @@ namespace ParkingSystem.Client.Services
             }
         }
 
+        /// <summary>
+        /// Lấy slots theo khu vực cho STAFF - Có đầy đủ thông tin cá nhân
+        /// </summary>
         public async Task<List<ParkingAreaDto>> GetSlotsByAreaAsync()
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<List<ParkingAreaDto>>("GetSlotsByArea");
@@ -79,6 +116,7 @@ namespace ParkingSystem.Client.Services
 
         public async Task<ParkingOverviewDto?> GetParkingOverviewAsync()
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<ParkingOverviewDto>("GetParkingOverview");
@@ -90,8 +128,42 @@ namespace ParkingSystem.Client.Services
             }
         }
 
+        // ============ PARKING SLOT OPERATIONS (CUSTOMER - Privacy Protected) ============
+
+        /// <summary>
+        /// Lấy slots theo khu vực cho CUSTOMER - Hiển thị thông tin chi tiết CHỈ cho slot của chính customer đó
+        /// </summary>
+        public async Task<List<CustomerParkingAreaDto>> GetSlotsByAreaForCustomerAsync(Guid customerId)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<List<CustomerParkingAreaDto>>("GetSlotsByAreaForCustomer", customerId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting slots by area for customer");
+                throw;
+            }
+        }
+
+        public async Task<ParkingOverviewDto?> GetParkingOverviewForCustomerAsync()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<ParkingOverviewDto>("GetParkingOverviewForCustomer");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting parking overview for customer");
+                throw;
+            }
+        }
+
         public async Task<List<ParkingSlotDto>> GetAvailableSlotsAsync()
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<List<ParkingSlotDto>>("GetAvailableSlots");
@@ -105,6 +177,7 @@ namespace ParkingSystem.Client.Services
 
         public async Task<ParkingSlotDto?> GetSlotByIdAsync(Guid slotId)
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<ParkingSlotDto>("GetSlotById", slotId);
@@ -120,6 +193,7 @@ namespace ParkingSystem.Client.Services
 
         public async Task<RegisterParkingResponse> RegisterParkingAsync(RegisterParkingRequest request)
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<RegisterParkingResponse>("RegisterParking", request);
@@ -137,6 +211,7 @@ namespace ParkingSystem.Client.Services
 
         public async Task<CheckOutResponse> CheckOutAsync(CheckOutRequest request)
         {
+            EnsureConnected();
             try
             {
                 return await Connection.InvokeAsync<CheckOutResponse>("CheckOut", request);
