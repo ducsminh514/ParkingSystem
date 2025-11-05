@@ -1,0 +1,348 @@
+@page "/"
+
+<PageTitle>Parking System - Hệ thống đỗ xe thông minh</PageTitle>
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 80px 0;
+        margin: -1rem -1rem 3rem -1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center no-repeat;
+        background-size: cover;
+        opacity: 0.3;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .feature-card {
+        transition: all 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    }
+    
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        text-align: center;
+    }
+    
+    .stats-number {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-gradient:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .action-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+        border: 2px solid transparent;
+    }
+    
+    .action-card:hover {
+        border-color: #667eea;
+        transform: translateY(-5px);
+    }
+    
+    .action-icon {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+        display: block;
+    }
+    
+    @@keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .float-animation {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    .welcome-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 50px;
+        padding: 1rem 2rem;
+        display: inline-block;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<AuthorizeView>
+    <Authorized>
+        @* Hero Section - Đã đăng nhập *@
+        <div class="hero-section">
+            <div class="hero-content container text-center">
+                <div class="welcome-badge">
+                    <i class="bi bi-stars"></i> Chào mừng trở lại
+                </div>
+                <h1 class="display-4 fw-bold mb-3">
+                    Xin chào, @context.User.Identity?.Name!
+                </h1>
+                <p class="lead mb-4">
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="bi bi-person-badge"></i>
+                        @(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User")
+                    </span>
+                </p>
+                <p class="fs-5">Bạn muốn làm gì hôm nay?</p>
+            </div>
+        </div>
+
+        <div class="container">
+            @* Action Cards dựa theo Role *@
+            @if (context.User.IsInRole("Customer"))
+            {
+                <div class="row g-4 mb-5">
+                    <div class="col-md-3">
+                        <div class="action-card">
+                            <i class="bi bi-car-front-fill action-icon text-primary float-animation"></i>
+                            <h4 class="fw-bold mb-3">Quản lý xe</h4>
+                            <p class="text-muted mb-4">Xem và quản lý danh sách xe của bạn</p>
+                            <a href="/my-vehicles" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Đi đến
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="action-card">
+                            <i class="bi bi-calendar-check-fill action-icon text-success float-animation" style="animation-delay: 0.2s;"></i>
+                            <h4 class="fw-bold mb-3">Đặt chỗ đỗ</h4>
+                            <p class="text-muted mb-4">Đặt trước chỗ đỗ xe của bạn</p>
+                            <a href="/my-bookings" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Đặt ngay
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="action-card">
+                            <i class="bi bi-clock-history action-icon text-info float-animation" style="animation-delay: 0.4s;"></i>
+                            <h4 class="fw-bold mb-3">Lịch sử</h4>
+                            <p class="text-muted mb-4">Xem lịch sử đỗ xe của bạn</p>
+                            <a href="/history" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Xem ngay
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="action-card">
+                            <i class="bi bi-clock-history action-icon text-info float-animation" style="animation-delay: 0.4s;"></i>
+                            <h4 class="fw-bold mb-3">Report</h4>
+                            <p class="text-muted mb-4">Xem lịch sử đỗ xe của bạn</p>
+                            <a href="/reports" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Xem ngay
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="action-card">
+                            <i class="bi bi-clock-history action-icon text-info float-animation" style="animation-delay: 0.4s;"></i>
+                            <h4 class="fw-bold mb-3">Slot</h4>
+                            <p class="text-muted mb-4">Xem lịch sử đỗ xe của bạn</p>
+                            <a href="/slots" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Xem ngay
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (context.User.IsInRole("Staff"))
+            {
+                <div class="row g-4 mb-5">
+                    <div class="col-md-3">
+                        <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="bi bi-people-fill" style="font-size: 2.5rem;"></i>
+                            <div class="stats-number">128</div>
+                            <div>Khách hàng</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <i class="bi bi-car-front-fill" style="font-size: 2.5rem;"></i>
+                            <div class="stats-number">45</div>
+                            <div>Xe đang đỗ</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <i class="bi bi-grid-3x3-gap-fill" style="font-size: 2.5rem;"></i>
+                            <div class="stats-number">15</div>
+                            <div>Chỗ trống</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <i class="bi bi-cash-coin" style="font-size: 2.5rem;"></i>
+                            <div class="stats-number">24M</div>
+                            <div>Doanh thu</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-5">
+                    <div class="col-md-4">
+                        <div class="action-card">
+                            <i class="bi bi-people-fill action-icon text-primary"></i>
+                            <h4 class="fw-bold mb-3">Quản lý khách hàng</h4>
+                            <p class="text-muted mb-4">Xem và quản lý thông tin khách hàng</p>
+                            <a href="/customers" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Quản lý
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="action-card">
+                            <i class="bi bi-grid-3x3-gap-fill action-icon text-success"></i>
+                            <h4 class="fw-bold mb-3">Quản lý chỗ đỗ</h4>
+                            <p class="text-muted mb-4">Theo dõi và quản lý chỗ đỗ xe</p>
+                            <a href="/parking-slots" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Quản lý
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="action-card">
+                            <i class="bi bi-graph-up action-icon text-info"></i>
+                            <h4 class="fw-bold mb-3">Báo cáo thống kê</h4>
+                            <p class="text-muted mb-4">Xem báo cáo và thống kê hệ thống</p>
+                            <a href="/reports" class="btn btn-gradient">
+                                <i class="bi bi-arrow-right-circle"></i> Xem báo cáo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        @* Hero Section - Chưa đăng nhập *@
+        <div class="hero-section">
+            <div class="hero-content container text-center">
+                <div class="mb-4">
+                    <i class="bi bi-p-square-fill" style="font-size: 5rem;"></i>
+                </div>
+                <h1 class="display-3 fw-bold mb-4">
+                    Hệ thống đỗ xe thông minh
+                </h1>
+                <p class="lead mb-5 fs-4">
+                    Giải pháp quản lý bãi đỗ xe hiện đại, nhanh chóng và an toàn
+                </p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="/register" class="btn btn-light btn-lg px-5 py-3">
+                        <i class="bi bi-person-plus-fill"></i> Đăng ký ngay
+                    </a>
+                    <a href="/login" class="btn btn-outline-light btn-lg px-5 py-3">
+                        <i class="bi bi-box-arrow-in-right"></i> Đăng nhập
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            @* Features *@
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="feature-card p-4 text-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-lightning-charge-fill"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Nhanh chóng</h4>
+                        <p class="text-muted">
+                            Đặt chỗ đỗ xe chỉ trong vài giây. Tiết kiệm thời gian tìm chỗ đỗ
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card p-4 text-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">An toàn</h4>
+                        <p class="text-muted">
+                            Bảo mật thông tin tuyệt đối. Camera giám sát 24/7
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card p-4 text-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Tiết kiệm</h4>
+                        <p class="text-muted">
+                            Giá cả hợp lý, nhiều chương trình ưu đãi hấp dẫn
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            @* CTA Section *@
+            <div class="text-center py-5 mb-5" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 20px;">
+                <h2 class="fw-bold mb-4">Sẵn sàng bắt đầu?</h2>
+                <p class="text-muted mb-4 fs-5">Tham gia cùng hàng nghìn người dùng đã tin tưởng</p>
+                <a href="/register" class="btn btn-gradient btn-lg px-5">
+                    <i class="bi bi-rocket-takeoff"></i> Đăng ký miễn phí
+                </a>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>

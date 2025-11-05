@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Components;
 using ParkingSystem.Server.Hubs;
 using ParkingSystem.Server.Models;
-using Microsoft.AspNetCore.Builder;
-using System.Text.Json;
+using ParkingSystem.Server.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -23,6 +23,8 @@ builder.Services.AddDbContext<ParkingManagementContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("ParkingManagementContext"));
 });
+
+builder.Services.AddHostedService<NotificationBackgroundService>();
 // Add SignalR
 builder.Services.AddSignalR(options =>
     {
@@ -41,7 +43,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazor", policy =>
     {
-        policy.WithOrigins("https://localhost:7068","http://localhost:5185") // URL của Blazor client
+        policy.WithOrigins("https://localhost:7068","http://localhost:5185") 
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials(); // Quan trọng cho SignalR

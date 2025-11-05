@@ -1,0 +1,119 @@
+@page "/register"
+@using ParkingSystem.Client.Services
+@using ParkingSystem.Shared.Models
+@inject CustomerService CustomerService
+@inject SimpleAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Đăng ký</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">📝 Đăng ký tài khoản</h4>
+                </div>
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success">@successMessage</div>
+                    }
+
+                    <EditForm Model="registerRequest" OnValidSubmit="HandleRegister">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Họ và tên:</label>
+                            <input type="text" class="form-control" @bind="registerRequest.FullName" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Số điện thoại:</label>
+                            <input type="tel" class="form-control" @bind="registerRequest.Phone" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email (tùy chọn):</label>
+                            <input type="email" class="form-control" @bind="registerRequest.Email" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Mật khẩu:</label>
+                            <input type="password" class="form-control" @bind="registerRequest.Password" required />
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Đăng ký
+                        </button>
+                    </EditForm>
+
+                    <hr class="my-4" />
+                    <div class="text-center">
+                        <p class="mb-0">Đã có tài khoản? <a href="/login" class="fw-bold">Đăng nhập</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerRequest = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Không cần init SignalR ngay
+    }
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var result = await CustomerService.RegisterCustomer(registerRequest);
+
+            if (result.Success)
+            {
+                // Tự động đăng nhập sau khi đăng ký thành công
+                if (result.UserInfo != null)
+                {
+                    await AuthStateProvider.MarkUserAsAuthenticated(result.UserInfo);
+                    successMessage = "Đăng ký thành công! Đang chuyển trang...";
+                    await Task.Delay(1500);
+                    Navigation.NavigateTo("/", forceLoad: true);
+                }
+                else
+                {
+                    successMessage = result.Message + " Đang chuyển đến trang đăng nhập...";
+                    await Task.Delay(1500);
+                    Navigation.NavigateTo("/login");
+                }
+            }
+            else
+            {
+                errorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi kết nối: {ex.Message}. Vui lòng kiểm tra Server đã chạy chưa.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

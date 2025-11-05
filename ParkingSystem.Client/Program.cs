@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Web;
+using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ParkingSystem.Client;
 using ParkingSystem.Client.Services;
@@ -7,21 +9,57 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+// ============================
+// HTTP Client
+// ============================
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
+});
 
-// HttpClient cho API calls - trỏ đến Server
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7142/") });
+// ============================
+// LocalStorage
+// ============================
+builder.Services.AddBlazoredLocalStorage();
 
-// ParkingService
-builder.Services.AddScoped<ParkingService>();
-// Program.cs (Server)
-//builder.Services.AddCors(options =>
-//{
-//    options.AddDefaultPolicy(policy =>
-//    {
-//        policy.SetIsOriginAllowed(origin => true) // CHỈ dùng cho development
-//            .AllowAnyHeader()
-//            .AllowAnyMethod()
-//            .AllowCredentials();
-//    });
-//});
-await builder.Build().RunAsync();
+// ============================
+// Authentication & Authorization
+// ============================
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
+builder.Services.AddScoped<SimpleAuthStateProvider>();
+builder.Services.AddScoped<UserService>();
+// ============================
+// SignalR Connection - SINGLETON
+// ============================
+builder.Services.AddSingleton<ISignalRConnectionService, SignalRConnectionService>();
+
+// ============================
+// Application Services - SCOPED
+// ============================
+builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<SlotService>();
+// ============================
+// Build Host
+// ============================
+var host = builder.Build();
+
+// ============================
+// Initialize SignalR Connection
+// ============================
+var connectionService = host.Services.GetRequiredService<ISignalRConnectionService>();
+try
+{
+    await connectionService.StartAsync();
+    Console.WriteLine("✅ SignalR connection established!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ Failed to connect to SignalR: {ex.Message}");
+}
+
+// ============================
+// Run Application
+// ============================
+await host.RunAsync();

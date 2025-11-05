@@ -1,7 +1,7 @@
 ﻿@page "/customers"
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Client.Services
-@inject ParkingService ParkingService
+@inject CustomerService CustomerService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
@@ -248,13 +248,10 @@
     {
         try
         {
-            // Initialize SignalR connection
-            await ParkingService.InitializeAsync();
-
             // Register real-time event handlers
-            ParkingService.OnCustomerAdded += HandleCustomerAdded;
-            ParkingService.OnCustomerUpdated += HandleCustomerUpdated;
-            ParkingService.OnCustomerDeleted += HandleCustomerDeleted;
+            CustomerService.OnCustomerAdded += HandleCustomerAdded;
+            CustomerService.OnCustomerUpdated += HandleCustomerUpdated;
+            CustomerService.OnCustomerDeleted += HandleCustomerDeleted;
 
             // Load initial data
             await LoadCustomers();
@@ -275,7 +272,7 @@
         {
             isLoading = true;
             errorMessage = string.Empty;
-            customers = await ParkingService.GetAllCustomersAsync();
+            customers = await CustomerService.GetAllCustomersAsync();
         }
         catch (Exception ex)
         {
@@ -298,7 +295,7 @@
             }
             else
             {
-                customers = await ParkingService.SearchCustomersAsync(searchKeyword);
+                customers = await CustomerService.SearchCustomersAsync(searchKeyword);
             }
         }
         catch (Exception ex)
@@ -351,12 +348,12 @@
 
             if (isEditMode)
             {
-                await ParkingService.UpdateCustomerAsync(currentCustomer);
+                await CustomerService.UpdateCustomerAsync(currentCustomer);
                 successMessage = "Cập nhật khách hàng thành công!";
             }
             else
             {
-                await ParkingService.AddCustomerAsync(currentCustomer);
+                await CustomerService.AddCustomerAsync(currentCustomer);
                 successMessage = "Thêm khách hàng mới thành công!";
             }
 
@@ -381,7 +378,7 @@
         {
             try
             {
-                await ParkingService.DeleteCustomerAsync(customer.CustomerId);
+                await CustomerService.DeleteCustomerAsync(customer.CustomerId);
                 successMessage = $"Đã xóa khách hàng '{customer.FullName}'";
             }
             catch (Exception ex)
@@ -426,8 +423,9 @@
     public async ValueTask DisposeAsync()
     {
         // Unregister event handlers
-        ParkingService.OnCustomerAdded -= HandleCustomerAdded;
-        ParkingService.OnCustomerUpdated -= HandleCustomerUpdated;
-        ParkingService.OnCustomerDeleted -= HandleCustomerDeleted;
+        CustomerService.OnCustomerAdded -= HandleCustomerAdded;
+        CustomerService.OnCustomerUpdated -= HandleCustomerUpdated;
+        CustomerService.OnCustomerDeleted -= HandleCustomerDeleted;
     }
+
 }

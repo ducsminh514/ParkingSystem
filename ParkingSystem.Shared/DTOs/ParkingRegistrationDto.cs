@@ -1,6 +1,6 @@
 using System;
 
-namespace ParkingSystem.Shared.Models;
+namespace ParkingSystem.Shared.DTOs;
 
 /// <summary>
 /// DTO cho request đăng ký parking

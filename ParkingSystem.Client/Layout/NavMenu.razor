@@ -1,7 +1,12 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+@using ParkingSystem.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject SimpleAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">
-            <i class="bi bi-car-front-fill"></i> Parking System
+            <i class="bi bi-p-square-fill"></i> Parking System
         </a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
@@ -13,21 +18,100 @@
     <nav class="flex-column">
         <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <i class="bi bi-house-door-fill me-2"></i> Trang Chủ
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Trang chủ
             </NavLink>
         </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" href="slots">
-                <i class="bi bi-p-square-fill me-2"></i> Quản Lý Chỗ Đỗ
-            </NavLink>
-        </div>
-        <div class="nav-item">
-            <NavLink class="nav-link" href="customers">
-                <i class="bi bi-people-fill me-2"></i> Khách Hàng
-            </NavLink>
-        </div>
+
+        <AuthorizeView Roles="Customer">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="my-vehicles">
+                    <span class="bi bi-car-front-fill" aria-hidden="true"></span> Xe của tôi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="my-bookings">
+                    <span class="bi bi-calendar-check-fill" aria-hidden="true"></span> Đặt chỗ của tôi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="profile">
+                    <span class="bi bi-person-circle" aria-hidden="true"></span> Hồ sơ
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Staff">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="customers">
+                    <span class="bi bi-people-fill" aria-hidden="true"></span> Khách hàng
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="parking-slots">
+                    <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Quản lý chỗ đỗ
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="reports">
+                    <span class="bi bi-graph-up" aria-hidden="true"></span> Báo cáo
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <hr class="my-2 text-white-50" />
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <div class="user-info p-2 mb-2">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-circle fs-3 me-2"></i>
+                            <div>
+                                <div class="fw-bold small">@context.User.Identity?.Name</div>
+                                <span class="badge badge-sm bg-info">
+                                    @(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-item px-3">
+                    <button class="nav-link btn btn-link w-100 text-start text-danger" @onclick="Logout">
+                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Đăng xuất
+                    </button>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link btn-login" href="login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Đăng nhập
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link btn-register" href="register">
+                        <span class="bi bi-person-plus-fill" aria-hidden="true"></span> Đăng ký
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
+
+<style>
+    .user-info {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: white;
+    }
+    
+    .btn-login:hover {
+        background: rgba(13, 110, 253, 0.2);
+    }
+    
+    .btn-register:hover {
+        background: rgba(25, 135, 84, 0.2);
+    }
+</style>
 
 @code {
     private bool collapseNavMenu = true;
@@ -37,5 +121,11 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task Logout()
+    {
+        await AuthStateProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login", forceLoad: true);
     }
 }
