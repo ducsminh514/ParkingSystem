@@ -36,6 +36,18 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
+                _logger.LogInformation("Bắt đầu lấy slots theo khu vực...");
+                
+                // Kiểm tra kết nối database
+                var totalCount = await _context.ParkingSlots.CountAsync();
+                _logger.LogInformation($"Tổng số slots trong database: {totalCount}");
+                
+                if (totalCount == 0)
+                {
+                    _logger.LogWarning("Không có slots nào trong database!");
+                    return new List<ParkingAreaDto>();
+                }
+
                 var allSlots = await _context.ParkingSlots
                     .Include(s => s.ParkingRegistrations
                         .Where(r => r.Status == "Active" || r.Status == "CheckedIn"))
@@ -43,6 +55,8 @@ namespace ParkingSystem.Server.Hubs
                     .ThenInclude(v => v.Customer)
                     .OrderBy(s => s.SlotCode)
                     .ToListAsync();
+
+                _logger.LogInformation($"Đã lấy được {allSlots.Count} slots từ database");
 
                 // Nhóm slots theo ký tự đầu tiên (Zone/Area)
                 var groupedSlots = allSlots
@@ -52,7 +66,7 @@ namespace ParkingSystem.Server.Hubs
                         AreaName = $"Khu {g.Key}",
                         TotalSlots = g.Count(),
                         AvailableSlots = g.Count(s => s.Status == "Available"),
-                        OccupiedSlots = g.Count(s => s.Status != "Available"),
+                        OccupiedSlots = g.Count(s => s.Status == "InUse" || s.Status == "Occupied"),
                         Slots = g.Select(s =>
                         {
                             var currentReg = s.ParkingRegistrations
@@ -75,11 +89,12 @@ namespace ParkingSystem.Server.Hubs
                     .OrderBy(a => a.AreaName)
                     .ToList();
 
+                _logger.LogInformation($"Đã nhóm thành {groupedSlots.Count} khu vực");
                 return groupedSlots;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy slots theo khu vực");
+                _logger.LogError(ex, "Lỗi khi lấy slots theo khu vực: {Message}", ex.Message);
                 throw new HubException($"Error getting slots by area: {ex.Message}");
             }
         }
@@ -88,10 +103,18 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
+                _logger.LogInformation("Bắt đầu lấy tổng quan parking...");
+                
                 var totalSlots = await _context.ParkingSlots.CountAsync();
+                _logger.LogInformation($"Tổng số slots: {totalSlots}");
+                
                 var availableSlots = await _context.ParkingSlots
                     .CountAsync(s => s.Status == "Available");
-                var occupiedSlots = totalSlots - availableSlots;
+                _logger.LogInformation($"Số slots trống: {availableSlots}");
+                
+                var occupiedSlots = await _context.ParkingSlots
+                    .CountAsync(s => s.Status == "InUse" || s.Status == "Occupied");
+                _logger.LogInformation($"Số slots đã sử dụng: {occupiedSlots}");
 
                 var overview = new ParkingOverviewDto
                 {
@@ -103,11 +126,12 @@ namespace ParkingSystem.Server.Hubs
                         : 0
                 };
 
+                _logger.LogInformation($"Hoàn thành lấy tổng quan: Total={overview.TotalSlots}, Available={overview.AvailableSlots}, Occupied={overview.OccupiedSlots}");
                 return overview;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy tổng quan parking");
+                _logger.LogError(ex, "Lỗi khi lấy tổng quan parking: {Message}", ex.Message);
                 throw new HubException($"Error getting parking overview: {ex.Message}");
             }
         }
@@ -237,7 +261,7 @@ namespace ParkingSystem.Server.Hubs
                 }
 
                 // 2. Tìm hoặc tạo khách hàng
-                Customer customer;
+                Customer? customer;
                 if (request.CustomerId.HasValue)
                 {
                     customer = await _context.Customers.FindAsync(request.CustomerId.Value);
@@ -299,7 +323,7 @@ namespace ParkingSystem.Server.Hubs
                 _context.ParkingRegistrations.Add(registration);
 
                 // 5. Cập nhật trạng thái slot
-                slot.Status = "Occupied";
+                slot.Status = "InUse";
 
                 // 6. Lưu tất cả thay đổi
                 await _context.SaveChangesAsync();
@@ -442,6 +466,81 @@ namespace ParkingSystem.Server.Hubs
                     Message = $"Lỗi server: {ex.Message}"
                 };
             }
+        }
+
+        // ============ CUSTOMER VIEW OPERATIONS (Privacy Protected) ============
+
+        /// <summary>
+        /// Lấy slots theo khu vực cho Customer - Hiển thị thông tin chi tiết CHỈ cho slot của chính họ
+        /// </summary>
+        public async Task<List<CustomerParkingAreaDto>> GetSlotsByAreaForCustomer(Guid customerId)
+        {
+            try
+            {
+                _logger.LogInformation($"Customer {customerId} đang lấy slots theo khu vực...");
+                
+                var allSlots = await _context.ParkingSlots
+                    .Include(s => s.ParkingRegistrations
+                        .Where(r => r.Status == "Active" || r.Status == "CheckedIn"))
+                    .ThenInclude(r => r.Vehicle)
+                    .ThenInclude(v => v.Customer)
+                    .OrderBy(s => s.SlotCode)
+                    .ToListAsync();
+
+                // Nhóm slots theo khu vực
+                var groupedSlots = allSlots
+                    .GroupBy(s => s.SlotCode.Length > 0 ? s.SlotCode[0].ToString().ToUpper() : "Unknown")
+                    .Select(g => new CustomerParkingAreaDto
+                    {
+                        AreaName = $"Khu {g.Key}",
+                        TotalSlots = g.Count(),
+                        AvailableSlots = g.Count(s => s.Status == "Available"),
+                        OccupiedSlots = g.Count(s => s.Status == "InUse" || s.Status == "Occupied"),
+                        Slots = g.Select(s =>
+                        {
+                            var currentReg = s.ParkingRegistrations
+                                .FirstOrDefault(r => r.Status == "Active" || r.Status == "CheckedIn");
+                            
+                            // Kiểm tra xem slot này có phải của customer hiện tại không
+                            bool isMySlot = currentReg != null && 
+                                           currentReg.Vehicle != null && 
+                                           currentReg.Vehicle.CustomerId == customerId;
+
+                            return new CustomerParkingSlotDto
+                            {
+                                SlotId = s.SlotId,
+                                SlotCode = s.SlotCode,
+                                Status = s.Status,
+                                IsMySlot = isMySlot,
+                                // Chỉ hiển thị thông tin chi tiết nếu là slot của customer này
+                                CurrentRegistrationId = isMySlot ? currentReg?.RegistrationId : null,
+                                VehiclePlateNumber = isMySlot ? currentReg?.Vehicle?.PlateNumber : null,
+                                VehicleType = isMySlot ? currentReg?.Vehicle?.VehicleType : null,
+                                CustomerPhone = isMySlot ? currentReg?.Vehicle?.Customer?.Phone : null,
+                                CheckInTime = isMySlot ? currentReg?.CheckInTime : null
+                            };
+                        }).ToList()
+                    })
+                    .OrderBy(a => a.AreaName)
+                    .ToList();
+
+                _logger.LogInformation($"Đã trả về {groupedSlots.Count} khu vực cho Customer (privacy protected)");
+                return groupedSlots;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy slots cho Customer");
+                throw new HubException($"Error getting slots: {ex.Message}");
+            }
+            }
+
+        /// <summary>
+        /// Lấy tổng quan parking cho Customer - Chỉ số liệu thống kê
+        /// </summary>
+        public async Task<ParkingOverviewDto> GetParkingOverviewForCustomer()
+        {
+            // Tổng quan thì cả Customer và Staff đều xem được số liệu như nhau
+            return await GetParkingOverview();
         }
     }
 }

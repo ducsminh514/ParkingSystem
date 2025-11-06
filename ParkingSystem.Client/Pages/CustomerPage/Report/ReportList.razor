@@ -198,6 +198,7 @@
     {
         // Subscribe to real-time events
         ReportService.OnReportStatusUpdated += HandleReportStatusUpdated;
+        ReportService.OnNewReportCreated += HandleNewReportCreated;
 		currentCustomerId = await UserService.GetCurrentUserId();
         await LoadReports();
     }
@@ -214,6 +215,31 @@
             FilterByStatus(selectedStatus);
 
             // Update UI
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleNewReportCreated(CustomerReport newReport)
+    {
+        // Only add if it's for current customer
+        if (newReport.CustomerId == currentCustomerId)
+        {
+            // Check if not already in list
+            if (!reports.Any(r => r.ReportId == newReport.ReportId))
+            {
+                reports.Insert(0, newReport); // Add to top
+                FilterByStatus(selectedStatus);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void HandleReportRated(Guid reportId, int rating)
+    {
+        var report = reports.FirstOrDefault(r => r.ReportId == reportId);
+        if (report != null)
+        {
+            report.Rating = rating;
             InvokeAsync(StateHasChanged);
         }
     }
