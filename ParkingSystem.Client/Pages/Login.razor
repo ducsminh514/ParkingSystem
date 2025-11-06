@@ -10,43 +10,59 @@
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-5">
-            <div class="card shadow" >
+            <div class="card shadow">
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0">🔐 Đăng nhập</h4>
                 </div>
                 <div class="card-body p-4">
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <div class="alert alert-danger">@errorMessage</div>
+                        <div class="alert alert-danger" role="alert">
+                            @errorMessage
+                        </div>
                     }
 
                     <EditForm Model="loginRequest" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Loại tài khoản:</label>
-                            <select class="form-select" @bind="loginRequest.IsStaff">
-                                <option value="false">👤 Khách hàng</option>
-                                <option value="true">👔 Nhân viên</option>
+                            <select class="form-select" @bind="UserType">
+                                <option value="customer">👤 Khách hàng</option>
+                                <option value="staff">👔 Nhân viên</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">
-                                @(loginRequest.IsStaff ? "Tên đăng nhập" : "Email/SĐT"):
+                                @(UserType == "staff" ? "Tên đăng nhập" : "Email/SĐT"):
                             </label>
-                            <input type="text" class="form-control" @bind="loginRequest.UsernameOrEmail" required />
+                            <input type="text" class="form-control"
+                                   @bind="loginRequest.UsernameOrEmail"
+                                   required
+                                   placeholder="@(UserType == "staff" ? "Nhập tên đăng nhập" : "Nhập email hoặc số điện thoại")" />
+                            <ValidationMessage For="@(() => loginRequest.UsernameOrEmail)" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Mật khẩu:</label>
-                            <input type="password" class="form-control" @bind="loginRequest.Password" required />
+                            <input type="password" class="form-control"
+                                   @bind="loginRequest.Password"
+                                   required
+                                   placeholder="Nhập mật khẩu" />
+                            <ValidationMessage For="@(() => loginRequest.Password)" />
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
                             @if (isLoading)
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Đang xử lý...</span>
                             }
-                            Đăng nhập
+                            else
+                            {
+                                <span>Đăng nhập</span>
+                            }
                         </button>
                     </EditForm>
 
@@ -64,10 +80,22 @@
     private LoginRequest loginRequest = new();
     private string? errorMessage;
     private bool isLoading;
+    private string userType = "customer";
 
-    protected override async Task OnInitializedAsync()
+    // ✅ Property với setter tự động xử lý thay đổi
+    private string UserType
     {
-        
+        get => userType;
+        set
+        {
+            if (userType != value)
+            {
+                userType = value;
+                loginRequest.IsStaff = value == "staff";
+                loginRequest.UsernameOrEmail = ""; // Clear input khi đổi loại
+                errorMessage = null; // Clear error
+            }
+        }
     }
 
     private async Task HandleLogin()
@@ -77,7 +105,6 @@
 
         try
         {
-            // ✅ Gọi qua service method
             var result = await CustomerService.Login(loginRequest);
 
             if (result.Success && result.UserInfo != null)
@@ -87,12 +114,13 @@
             }
             else
             {
-                errorMessage = result.Message;
+                errorMessage = result.Message ?? "Đăng nhập thất bại";
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Lỗi: {ex.Message}";
+            Console.WriteLine($"[Login Error] {ex}");
         }
         finally
         {

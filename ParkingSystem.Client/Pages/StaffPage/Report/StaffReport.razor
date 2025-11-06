@@ -1,0 +1,280 @@
+﻿@page "/staff/reports"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Client.Services
+@inject IReportService ReportService
+@inject NavigationManager Navigation
+@inject UserService UserService
+@implements IDisposable
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>My Assigned Reports</h2>
+        <button class="btn btn-outline-secondary" @onclick="RefreshData">
+            <span class="oi oi-reload"></span> Refresh
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else
+    {
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-2">@reports.Count</h3>
+                        <p class="text-muted mb-0">Total Assigned</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-warning">
+                    <div class="card-body">
+                        <h3 class="text-warning mb-2">@reports.Count(r => r.Status == "Pending")</h3>
+                        <p class="text-muted mb-0">Pending</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-primary">
+                    <div class="card-body">
+                        <h3 class="text-primary mb-2">@reports.Count(r => r.Status == "InProgress")</h3>
+                        <p class="text-muted mb-0">In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-success">
+                    <div class="card-body">
+                        <h3 class="text-success mb-2">@reports.Count(r => r.Status == "Resolved")</h3>
+                        <p class="text-muted mb-0">Resolved</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <button class="nav-link @(selectedStatus == "All" ? "active" : "")" 
+                        @onclick='() => FilterByStatus("All")'>All</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(selectedStatus == "Pending" ? "active" : "")" 
+                        @onclick='() => FilterByStatus("Pending")'>Pending</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(selectedStatus == "InProgress" ? "active" : "")" 
+                        @onclick='() => FilterByStatus("InProgress")'>In Progress</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(selectedStatus == "Resolved" ? "active" : "")" 
+                        @onclick='() => FilterByStatus("Resolved")'>Resolved</button>
+            </li>
+        </ul>
+
+        <!-- Reports List -->
+        @if (!filteredReports.Any())
+        {
+            <div class="alert alert-info">
+                <p class="mb-0">No reports assigned to you yet.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var report in filteredReports)
+                {
+                    <div class="col-md-12 mb-3">
+                        <div class="card" style="cursor: pointer;" @onclick="() => ViewDetail(report.ReportId)">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div style="flex-grow: 1;">
+                                        <h5 class="card-title">
+                                            @report.Title
+                                            <span class="badge badge-@GetStatusColor(report.Status)">@report.Status</span>
+                                            <span class="badge badge-@GetPriorityColor(report.Priority)">@report.Priority</span>
+                                        </h5>
+                                        <p class="text-muted small mb-2">
+                                            <strong>Customer:</strong> @report.Customer?.FullName | 
+                                            <strong>Category:</strong> @report.Category?.CategoryName
+                                        </p>
+                                        <p class="card-text">@GetTruncated(report.Content, 150)</p>
+                                    </div>
+                                    <div class="text-end ms-3">
+                                        <small class="text-muted d-block">
+                                            Created: @report.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                        @if (report.UpdatedDate.HasValue)
+                                        {
+                                            <small class="text-muted d-block">
+                                                Updated: @report.UpdatedDate.Value.ToString("dd/MM/yyyy HH:mm")
+                                            </small>
+                                        }
+                                        @if (report.ReportComments.Count > 0)
+                                        {
+                                            <span class="badge badge-secondary mt-2">
+                                                @report.ReportComments.Count Comments
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (report.Status != "Resolved" && report.Status != "Rejected")
+                                {
+                                    <div class="mt-3">
+                                        <button class="btn btn-sm btn-primary" 
+                                                @onclick:stopPropagation="true"
+                                                @onclick="() => ViewDetail(report.ReportId)">
+                                            <span class="oi oi-wrench"></span> Work on this
+                                        </button>
+                                    </div>
+                                }
+
+                                @if (report.Rating.HasValue)
+                                {
+                                    <div class="mt-2">
+                                        <small class="text-muted">Customer rating: </small>
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <span style="color: @(i <= report.Rating ? "#ffc107" : "#ccc");">★</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<CustomerReport> reports = new();
+    private List<CustomerReport> filteredReports = new();
+    private bool isLoading = true;
+    private string selectedStatus = "All";
+    private Guid currentStaffId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ReportService.OnReportAssigned += HandleReportAssigned;
+        ReportService.OnReportStatusUpdated += HandleReportStatusUpdated;
+        ReportService.OnNewCommentAdded += HandleNewCommentAdded;
+
+        currentStaffId = await UserService.GetCurrentUserId();
+        await LoadReports();
+    }
+
+    private async Task LoadReports()
+    {
+        isLoading = true;
+        try
+        {
+            reports = await ReportService.GetMyAssignedReportsAsync(currentStaffId);
+            filteredReports = reports;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterByStatus(string status)
+    {
+        selectedStatus = status;
+        filteredReports = status == "All" 
+            ? reports 
+            : reports.Where(r => r.Status == status).ToList();
+    }
+
+    private void HandleReportAssigned(CustomerReport report)
+    {
+        if (report.AssignedStaffId == currentStaffId)
+        {
+            if (!reports.Any(r => r.ReportId == report.ReportId))
+            {
+                reports.Insert(0, report);
+                FilterByStatus(selectedStatus);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void HandleReportStatusUpdated(Guid reportId, string status)
+    {
+        var report = reports.FirstOrDefault(r => r.ReportId == reportId);
+        if (report != null)
+        {
+            report.Status = status;
+            report.UpdatedDate = DateTime.Now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleNewCommentAdded(ReportComment comment)
+    {
+        var report = reports.FirstOrDefault(r => r.ReportId == comment.ReportId);
+        if (report != null)
+        {
+            if (!report.ReportComments.Any(c => c.CommentId == comment.CommentId))
+            {
+                report.ReportComments.Add(comment);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void ViewDetail(Guid reportId)
+    {
+        Navigation.NavigateTo($"/staff/reports/{reportId}");
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadReports();
+        FilterByStatus(selectedStatus);
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Pending" => "warning",
+        "InProgress" => "primary",
+        "Resolved" => "success",
+        "Rejected" => "danger",
+        _ => "secondary"
+    };
+
+    private string GetPriorityColor(string priority) => priority switch
+    {
+        "Urgent" => "danger",
+        "High" => "warning",
+        "Normal" => "info",
+        "Low" => "secondary",
+        _ => "secondary"
+    };
+
+    private string GetTruncated(string content, int length)
+    {
+        if (string.IsNullOrEmpty(content) || content.Length <= length)
+            return content;
+        return content.Substring(0, length) + "...";
+    }
+
+    public void Dispose()
+    {
+        ReportService.OnReportAssigned -= HandleReportAssigned;
+        ReportService.OnReportStatusUpdated -= HandleReportStatusUpdated;
+        ReportService.OnNewCommentAdded -= HandleNewCommentAdded;
+    }
+}

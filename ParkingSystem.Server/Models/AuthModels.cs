@@ -33,4 +33,5 @@ public class UserInfo
     public string UserType { get; set; } = null!; // "Customer" hoặc "Staff"
     public string? Email { get; set; }
     public string? Phone { get; set; }
+
 }
