@@ -104,6 +104,7 @@
     {
         @if (isStaff)
         {
+            <div>   ngu vcl</div>
             <!-- STAFF VIEW: Hiển thị đầy đủ thông tin -->
             @foreach (var area in parkingAreas)
             {
@@ -951,7 +952,7 @@
                 // Update area statistics
                 area.AvailableSlots = area.Slots.Count(s => s.IsAvailable);
                 area.OccupiedSlots = area.Slots.Count(s => !s.IsAvailable);
-                
+
                 InvokeAsync(StateHasChanged);
                 break;
             }
@@ -997,7 +998,7 @@
             {
                 errorMessage = "Đang kết nối tới server...";
                 StateHasChanged();
-                
+
                 // Thử kết nối lại
                 bool reconnected = await SlotService.TryReconnectAsync();
                 if (!reconnected)
@@ -1005,7 +1006,7 @@
                     errorMessage = "Không thể kết nối tới server. Vui lòng kiểm tra server đã chạy chưa và thử lại.";
                     return;
                 }
-                
+
                 errorMessage = string.Empty;
             }
 

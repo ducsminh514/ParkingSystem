@@ -28,7 +28,7 @@ namespace ParkingSystem.Client.Services
         
         // Staff methods
         Task<List<CustomerReport>> GetMyAssignedReportsAsync(Guid staffId);
-        Task<bool> UpdateReportStatusByStaffAsync(Guid reportId, string status, string resolutionNote = null);
+        Task<bool> UpdateReportStatusByStaffAsync(Guid reportId, string status, string resolutionNote=null);
         Task<ReportComment> AddInternalNoteAsync(ReportComment comment);
         Task<object> GetStaffStatisticsAsync(Guid staffId);
         
@@ -199,7 +199,7 @@ namespace ParkingSystem.Client.Services
             return await Connection.InvokeAsync<List<CustomerReport>>("GetMyAssignedReports", staffId);
         }
 
-        public async Task<bool> UpdateReportStatusByStaffAsync(Guid reportId, string status, string resolutionNote = null)
+        public async Task<bool> UpdateReportStatusByStaffAsync(Guid reportId, string status, string resolutionNote =null )
         {
             var result = await Connection.InvokeAsync<bool>("UpdateReportStatus", reportId, status, resolutionNote);
             if (result)

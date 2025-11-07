@@ -7,7 +7,7 @@ public partial class ParkingRegistration
 {
     public Guid RegistrationId { get; set; }
 
-    public Guid VehicleId { get; set; }
+    public Guid? VehicleId { get; set; }
 
     public Guid SlotId { get; set; }
 

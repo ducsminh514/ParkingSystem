@@ -16,6 +16,7 @@ public class ParkingSlotDto
     public Guid? CurrentRegistrationId { get; set; }
     public string? VehiclePlateNumber { get; set; }
     public string? VehicleType { get; set; }
+    public Guid? CustomerId { get; set; }
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public DateTime? CheckInTime { get; set; }
@@ -82,6 +83,7 @@ public class CustomerParkingSlotDto
     public Guid? CurrentRegistrationId { get; set; }
     public string? VehiclePlateNumber { get; set; }
     public string? VehicleType { get; set; }
+    public Guid? CustomerId { get; set; }
     public string? CustomerPhone { get; set; }
     public DateTime? CheckInTime { get; set; }
     

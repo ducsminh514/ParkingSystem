@@ -168,7 +168,7 @@ namespace ParkingSystem.Server.Hubs
         // ============================
         // Update Report Status (Staff only)
         // ============================
-        public async Task<bool> UpdateReportStatus(Guid reportId, string status, Guid? staffId = null, string resolutionNote = null)
+        public async Task<bool> UpdateReportStatus(Guid reportId, string status , string resolutionNote=null)
         {
             try
             {
@@ -179,8 +179,6 @@ namespace ParkingSystem.Server.Hubs
                 report.Status = status;
                 report.UpdatedDate = DateTime.Now;
 
-                if (staffId.HasValue)
-                    report.AssignedStaffId = staffId;
 
                 if (!string.IsNullOrEmpty(resolutionNote))
                     report.ResolutionNote = resolutionNote;

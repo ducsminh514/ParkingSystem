@@ -1,0 +1,534 @@
+﻿@page "/admin/reports/{ReportId:guid}"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Client.Services
+@inject IReportService ReportService
+@inject UserService UserService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="container mt-4">
+    <div class="mb-3">
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <span class="oi oi-arrow-left"></span> Back to All Reports
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (report == null)
+    {
+        <div class="alert alert-danger">Report not found</div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-2">@report.Title</h4>
+                        <span class="badge bg-light text-dark me-2">@report.Status</span>
+                        <span class="badge bg-warning text-dark">@report.Priority</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block">
+                                <strong>Customer:</strong> @report.Customer?.FullName (@report.Customer?.Email)
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>Category:</strong> @report.Category?.CategoryName
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>Created:</strong> @report.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                            @if (report.UpdatedDate.HasValue)
+                            {
+                                <small class="text-muted d-block">
+                                    <strong>Last Updated:</strong> @report.UpdatedDate.Value.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            }
+                        </div>
+
+                        <hr />
+
+                        <div class="report-content">
+                            <h6>Description:</h6>
+                            <p style="white-space: pre-wrap;">@report.Content</p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(report.ResolutionNote))
+                        {
+                            <div class="alert alert-success mt-3">
+                                <h6><span class="oi oi-check"></span> Resolution Note:</h6>
+                                <p class="mb-0">@report.ResolutionNote</p>
+                            </div>
+                        }
+
+                        @if (report.Rating.HasValue)
+                        {
+                            <div class="mt-3">
+                                <strong>Customer Rating: </strong>
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span style="color: @(i <= report.Rating ? "#ffc107" : "#ccc");">★</span>
+                                }
+                                <span class="ms-2">(@report.Rating.Value / 5)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><span class="oi oi-comment-square"></span> Comments (@report.ReportComments.Count)</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (report.ReportComments.Any())
+                        {
+                            <div class="comments-list">
+                                @foreach (var comment in report.ReportComments.OrderBy(c => c.CreatedDate))
+                                {
+                                    <div class="mb-3 p-3 border rounded @(comment.UserType == "Staff" ? "bg-light" : "") @(comment.IsInternal ? "border-warning" : "")">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <div>
+                                                <strong>@GetCommentUserName(comment)</strong>
+                                                @if (comment.UserType == "Staff")
+                                                {
+                                                    <span class="badge bg-primary ms-2">Staff</span>
+                                                }
+                                                @if (comment.IsInternal)
+                                                {
+                                                    <span class="badge bg-warning ms-2">Internal Note</span>
+                                                }
+                                            </div>
+                                            <small class="text-muted">
+                                                @comment.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                            </small>
+                                        </div>
+                                        <p class="mb-0" style="white-space: pre-wrap;">@comment.Comment</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-3">No comments yet</p>
+                        }
+
+                        <!-- Admin Add Comment -->
+                        <hr />
+                        <div class="add-comment-section">
+                            <h6>Add Comment (Admin):</h6>
+                            <div class="form-group mb-2">
+                                <textarea class="form-control" rows="3"
+                                          @bind="newComment"
+                                          placeholder="Type your comment here..."
+                                          disabled="@isSubmittingComment"></textarea>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" @bind="isInternalNote" id="internalCheck">
+                                <label class="form-check-label" for="internalCheck">
+                                    Internal Note (Only visible to Staff/Admin)
+                                </label>
+                            </div>
+                            <button class="btn btn-primary" @onclick="HandleAddComment" disabled="@(string.IsNullOrWhiteSpace(newComment) || isSubmittingComment)">
+                                @if (isSubmittingComment)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <span class="oi oi-comment-square"></span> Post Comment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Actions -->
+            <div class="col-md-4">
+                <!-- Admin Actions Panel -->
+                <div class="card mb-3 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6><span class="oi oi-wrench"></span> Admin Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Assign/Reassign Staff -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Assigned Staff:</strong></label>
+                            @if (report.AssignedStaff != null)
+                            {
+                                <p class="mb-2">
+                                    <span class="badge bg-success">@report.AssignedStaff.FullName</span>
+                                </p>
+                                <button class="btn btn-sm btn-warning w-100" @onclick="ShowReassignModal">
+                                    <span class="oi oi-people"></span> Reassign
+                                </button>
+                            }
+                            else
+                            {
+                                <p class="text-warning mb-2">Not assigned yet</p>
+                                <button class="btn btn-sm btn-success w-100" @onclick="ShowAssignModal">
+                                    <span class="oi oi-person"></span> Assign to Staff
+                                </button>
+                            }
+                        </div>
+
+                        <hr />
+
+                        <!-- Change Priority -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Priority:</strong></label>
+                            <select class="form-control mb-2" @bind="selectedPriority">
+                                <option value="Low">Low</option>
+                                <option value="Normal">Normal</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                            <button class="btn btn-sm btn-primary w-100" @onclick="ChangePriority" disabled="@(selectedPriority == report.Priority || isChangingPriority)">
+                                @if (isChangingPriority)
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                }
+                                Update Priority
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Info Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6><span class="oi oi-info"></span> Report Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <small class="text-muted">Report ID:</small>
+                            <br />
+                            <code style="font-size: 0.75rem; word-break: break-all;">@report.ReportId</code>
+                        </div>
+                        <hr />
+                        <div class="mb-2">
+                            <small class="text-muted">Status:</small>
+                            <br />
+                            <span class="badge badge-@GetStatusColor(report.Status)">@report.Status</span>
+                        </div>
+                        <hr />
+                        <div class="mb-2">
+                            <small class="text-muted">Customer Phone:</small>
+                            <br />
+                            <strong>@report.Customer?.Phone</strong>
+                        </div>
+                        @if (report.ResolvedDate.HasValue)
+                        {
+                            <hr />
+                            <div class="mb-2">
+                                <small class="text-muted">Resolved on:</small>
+                                <br />
+                                @report.ResolvedDate.Value.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Assign/Reassign Modal -->
+@if (showAssignModal)
+{
+    <div class="modal show d-block" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(report?.AssignedStaff != null ? "Reassign" : "Assign") Report to Staff</h5>
+                    <button type="button" class="close" @onclick="CloseAssignModal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Staff Member *</label>
+                        <select class="form-control" @bind="selectedStaffId">
+                            <option value="">-- Select Staff --</option>
+                            @foreach (var staff in staffList)
+                            {
+                                <option value="@staff.StaffId">@staff.FullName (@staff.Username)</option>
+                            }
+                        </select>
+                    </div>
+                    @if (!string.IsNullOrEmpty(assignError))
+                    {
+                        <div class="alert alert-danger">@assignError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseAssignModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="AssignStaff" disabled="@(selectedStaffId == Guid.Empty || isAssigning)">
+                        @if (isAssigning)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        @(report?.AssignedStaff != null ? "Reassign" : "Assign")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid ReportId { get; set; }
+
+    private CustomerReport? report;
+    private List<Staff> staffList = new();
+    private bool isLoading = true;
+    private bool isSubmittingComment = false;
+    private bool isChangingPriority = false;
+    private string newComment = string.Empty;
+    private bool isInternalNote = false;
+    private string selectedPriority = "Normal";
+
+    private bool showAssignModal = false;
+    private Guid selectedStaffId = Guid.Empty;
+    private bool isAssigning = false;
+    private string assignError = string.Empty;
+
+    private Guid currentAdminId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ReportService.OnReportStatusUpdated += HandleReportStatusUpdated;
+        ReportService.OnNewCommentAdded += HandleNewCommentAdded;
+        ReportService.OnReportAssigned += HandleReportAssigned;
+        currentAdminId = await UserService.GetCurrentUserId();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            report = await ReportService.GetReportDetailAsync(ReportId);
+            staffList = await ReportService.GetAllStaffAsync();
+
+            if (report != null)
+            {
+                selectedPriority = report.Priority;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowAssignModal()
+    {
+        selectedStaffId = Guid.Empty;
+        assignError = string.Empty;
+        showAssignModal = true;
+    }
+
+    private void ShowReassignModal()
+    {
+        selectedStaffId = report?.AssignedStaffId ?? Guid.Empty;
+        assignError = string.Empty;
+        showAssignModal = true;
+    }
+
+    private void CloseAssignModal()
+    {
+        showAssignModal = false;
+    }
+
+    private async Task AssignStaff()
+    {
+        if (selectedStaffId == Guid.Empty || report == null)
+            return;
+
+        isAssigning = true;
+        assignError = string.Empty;
+
+        try
+        {
+            bool success;
+            if (report.AssignedStaff != null)
+            {
+                success = await ReportService.ReassignReportAsync(report.ReportId, selectedStaffId);
+            }
+            else
+            {
+                success = await ReportService.AssignReportToStaffAsync(report.ReportId, selectedStaffId);
+            }
+
+            if (success)
+            {
+                await LoadData();
+                CloseAssignModal();
+            }
+            else
+            {
+                assignError = "Failed to assign report";
+            }
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isAssigning = false;
+        }
+    }
+
+    private async Task ChangePriority()
+    {
+        if (report == null || selectedPriority == report.Priority)
+            return;
+
+        isChangingPriority = true;
+        try
+        {
+            var success = await ReportService.ChangePriorityAsync(report.ReportId, selectedPriority);
+            if (success)
+            {
+                report.Priority = selectedPriority;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isChangingPriority = false;
+        }
+    }
+
+    private async Task HandleAddComment()
+    {
+        if (string.IsNullOrWhiteSpace(newComment) || report == null)
+            return;
+
+        isSubmittingComment = true;
+        try
+        {
+            var comment = new ReportComment
+            {
+                ReportId = report.ReportId,
+                UserId = currentAdminId,
+                UserType = "Admin",
+                Comment = newComment,
+                IsInternal = isInternalNote
+            };
+
+            ReportComment addedComment;
+            if (isInternalNote)
+            {
+                addedComment = await ReportService.AddInternalNoteAsync(comment);
+            }
+            else
+            {
+                addedComment = await ReportService.AddCommentAsync(comment);
+            }
+
+            if (!report.ReportComments.Any(c => c.CommentId == addedComment.CommentId))
+            {
+                report.ReportComments.Add(addedComment);
+            }
+
+            newComment = string.Empty;
+            isInternalNote = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSubmittingComment = false;
+        }
+    }
+
+    private void HandleReportStatusUpdated(Guid reportId, string status)
+    {
+        if (report != null && report.ReportId == reportId)
+        {
+            report.Status = status;
+            report.UpdatedDate = DateTime.Now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleNewCommentAdded(ReportComment comment)
+    {
+        if (report != null && comment.ReportId == ReportId && !comment.IsInternal)
+        {
+            if (!report.ReportComments.Any(c => c.CommentId == comment.CommentId))
+            {
+                report.ReportComments.Add(comment);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void HandleReportAssigned(CustomerReport updatedReport)
+    {
+        if (report != null && updatedReport.ReportId == report.ReportId)
+        {
+            report.AssignedStaffId = updatedReport.AssignedStaffId;
+            report.AssignedStaff = updatedReport.AssignedStaff;
+            report.Status = updatedReport.Status;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin/reports");
+    }
+
+    private string GetCommentUserName(ReportComment comment)
+    {
+
+        if (comment.UserType == "Customer")
+        {
+            return report?.Customer?.FullName ?? "Customer";
+        }
+        else if (comment.UserType == "Staff")
+        {
+            return report?.AssignedStaff?.FullName ?? "Staff";
+        }
+        else
+        {
+            return "Admin";
+        }
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Pending" => "warning",
+        "InProgress" => "primary",
+        "Resolved" => "success",
+        "Rejected" => "danger",
+        _ => "secondary"
+    };
+
+    public void Dispose()
+    {
+        ReportService.OnReportStatusUpdated -= HandleReportStatusUpdated;
+        ReportService.OnNewCommentAdded -= HandleNewCommentAdded;
+        ReportService.OnReportAssigned -= HandleReportAssigned;
+    }
+}
