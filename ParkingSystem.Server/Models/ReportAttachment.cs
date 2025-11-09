@@ -21,3 +21,5 @@ public partial class ReportAttachment
 
     public virtual CustomerReport Report { get; set; } = null!;
 }
+
+ 
