@@ -1,4 +1,4 @@
-﻿using System.Data.SqlTypes;
+using System.Data.SqlTypes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using ParkingSystem.Shared.Models;
@@ -154,7 +154,19 @@ namespace ParkingSystem.Client.Services
                 throw;
             }
         }
-
+        public async Task ChangePassword(Guid customerId, ChangePasswordModel model)
+        {
+            EnsureConnected();
+            try
+            {
+                await HubConnection!.InvokeAsync("ChangePassword", customerId, model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password");
+                throw;
+            }
+        }
         public async Task<List<Customer>> SearchCustomersAsync(string keyword)
         {
             EnsureConnected();

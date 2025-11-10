@@ -1,0 +1,457 @@
+﻿@page "/admin/reports"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Client.Services
+@inject IReportService ReportService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Report Management</h2>
+        <button class="btn btn-outline-secondary" @onclick="RefreshData">
+            <span class="oi oi-reload"></span> Refresh
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else
+    {
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center border-warning">
+                    <div class="card-body">
+                        <h3 class="text-warning mb-2">@unassignedCount</h3>
+                        <p class="text-muted mb-0">Unassigned Reports</p>
+                        <small class="text-danger">⚠️ Needs Attention</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-2">@reports.Count</h3>
+                        <p class="text-muted mb-0">Total Reports</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary mb-2">@reports.Count(r => r.Status == "InProgress")</h3>
+                        <p class="text-muted mb-0">In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-success mb-2">@reports.Count(r => r.Status == "Resolved")</h3>
+                        <p class="text-muted mb-0">Resolved</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted">🔴 Urgent</h6>
+                        <h4>@reports.Count(r => r.Priority == "Urgent")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted">🟠 High</h6>
+                        <h4>@reports.Count(r => r.Priority == "High")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted">🔵 Normal</h6>
+                        <h4>@reports.Count(r => r.Priority == "Normal")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted">⚪ Low</h6>
+                        <h4>@reports.Count(r => r.Priority == "Low")</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-control" @bind="filterStatus">
+                            <option value="All">All Status</option>
+                            <option value="Unassigned">Unassigned</option>
+                            <option value="Pending">Pending</option>
+                            <option value="InProgress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Priority</label>
+                        <select class="form-control" @bind="filterPriority">
+                            <option value="All">All Priorities</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="High">High</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" @bind="filterCategory">
+                            <option value="All">All Categories</option>
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.CategoryName">@cat.CategoryName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary w-100" @onclick="ApplyFilters">
+                            <span class="oi oi-magnifying-glass"></span> Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!filteredReports.Any())
+                            {
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        No reports found
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var report in filteredReports)
+                                {
+                                    <tr>
+                                        <td>
+                                            <code style="font-size: 0.75rem;">@report.ReportId.ToString().Substring(0, 8)</code>
+                                        </td>
+                                        <td>@report.Customer?.FullName</td>
+                                        <td>
+                                            <strong>@report.Title</strong>
+                                            <br/>
+                                            <small class="text-muted">@GetTruncated(report.Content, 50)</small>
+                                        </td>
+                                        <td>@report.Category?.CategoryName</td>
+                                        <td>
+                                            <span class="badge badge-@GetPriorityColor(report.Priority)">
+                                                @report.Priority
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-@GetStatusColor(report.Status)">
+                                                @report.Status
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (report.AssignedStaff != null)
+                                            {
+                                                <span>@report.AssignedStaff.FullName</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-warning">Unassigned</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small>@report.CreatedDate.ToString("dd/MM/yyyy HH:mm")</small>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => ViewDetail(report.ReportId)">
+                                                <span class="oi oi-eye"></span> View
+                                            </button>
+                                            @if (report.AssignedStaffId == null)
+                                            {
+                                                <button class="btn btn-sm btn-success" @onclick="() => ShowAssignModal(report)">
+                                                    <span class="oi oi-person"></span> Assign
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Assign Modal -->
+@if (showAssignModal && selectedReport != null)
+{
+    <div class="modal show d-block" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Report to Staff</h5>
+                    <button type="button" class="close" @onclick="CloseAssignModal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Report:</strong> @selectedReport.Title
+                    </div>
+                    <div class="mb-3">
+                        <strong>Customer:</strong> @selectedReport.Customer?.FullName
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Staff Member *</label>
+                        <select class="form-control" @bind="selectedStaffId">
+                            <option value="">-- Select Staff --</option>
+                            @foreach (var staff in staffList)
+                            {
+                                <option value="@staff.StaffId">@staff.FullName (@staff.Username)</option>
+                            }
+                        </select>
+                    </div>
+                    @if (!string.IsNullOrEmpty(assignError))
+                    {
+                        <div class="alert alert-danger">@assignError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseAssignModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="AssignReport" disabled="@(selectedStaffId == Guid.Empty || isAssigning)">
+                        @if (isAssigning)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        Assign to Staff
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CustomerReport> reports = new();
+    private List<CustomerReport> filteredReports = new();
+    private List<ReportCategory> categories = new();
+    private List<Staff> staffList = new();
+    private bool isLoading = true;
+
+    private string filterStatus = "All";
+    private string filterPriority = "All";
+    private string filterCategory = "All";
+    
+    private int unassignedCount => reports.Count(r => r.AssignedStaffId == null);
+
+    private bool showAssignModal = false;
+    private CustomerReport? selectedReport;
+    private Guid selectedStaffId = Guid.Empty;
+    private bool isAssigning = false;
+    private string assignError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ReportService.OnNewReportCreated += HandleNewReportCreated;
+        ReportService.OnReportStatusUpdated += HandleReportStatusUpdated;
+        
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            // Load all reports (Admin sees all)
+            reports = await ReportService.GetAllReportsAsync();
+            filteredReports = reports;
+
+            categories = await ReportService.GetCategoriesAsync();
+            staffList = await ReportService.GetAllStaffAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        filteredReports = reports;
+
+        if (filterStatus == "Unassigned")
+        {
+            filteredReports = filteredReports.Where(r => r.AssignedStaffId == null).ToList();
+        }
+        else if (filterStatus != "All")
+        {
+            filteredReports = filteredReports.Where(r => r.Status == filterStatus).ToList();
+        }
+
+        if (filterPriority != "All")
+        {
+            filteredReports = filteredReports.Where(r => r.Priority == filterPriority).ToList();
+        }
+
+        if (filterCategory != "All")
+        {
+            filteredReports = filteredReports.Where(r => r.Category?.CategoryName == filterCategory).ToList();
+        }
+    }
+
+    private void ShowAssignModal(CustomerReport report)
+    {
+        selectedReport = report;
+        selectedStaffId = Guid.Empty;
+        assignError = string.Empty;
+        showAssignModal = true;
+    }
+
+    private void CloseAssignModal()
+    {
+        showAssignModal = false;
+        selectedReport = null;
+    }
+
+    private async Task AssignReport()
+    {
+        if (selectedStaffId == Guid.Empty || selectedReport == null)
+            return;
+
+        isAssigning = true;
+        assignError = string.Empty;
+
+        try
+        {
+            var success = await ReportService.AssignReportToStaffAsync(selectedReport.ReportId, selectedStaffId);
+            if (success)
+            {
+                await LoadData();
+                CloseAssignModal();
+            }
+            else
+            {
+                assignError = "Failed to assign report";
+            }
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isAssigning = false;
+        }
+    }
+
+    private void ViewDetail(Guid reportId)
+    {
+        Navigation.NavigateTo($"/admin/reports/{reportId}");
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        ApplyFilters();
+    }
+
+    private void HandleNewReportCreated(CustomerReport report)
+    {
+        if (!reports.Any(r => r.ReportId == report.ReportId))
+        {
+            reports.Insert(0, report);
+            ApplyFilters();
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleReportStatusUpdated(Guid reportId, string status)
+    {
+        var report = reports.FirstOrDefault(r => r.ReportId == reportId);
+        if (report != null)
+        {
+            report.Status = status;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Pending" => "warning",
+        "InProgress" => "primary",
+        "Resolved" => "success",
+        "Rejected" => "danger",
+        _ => "secondary"
+    };
+
+    private string GetPriorityColor(string priority) => priority switch
+    {
+        "Urgent" => "danger",
+        "High" => "warning",
+        "Normal" => "info",
+        "Low" => "secondary",
+        _ => "secondary"
+    };
+
+    private string GetTruncated(string content, int length)
+    {
+        if (string.IsNullOrEmpty(content) || content.Length <= length)
+            return content;
+        return content.Substring(0, length) + "...";
+    }
+
+    public void Dispose()
+    {
+        ReportService.OnNewReportCreated -= HandleNewReportCreated;
+        ReportService.OnReportStatusUpdated -= HandleReportStatusUpdated;
+    }
+}

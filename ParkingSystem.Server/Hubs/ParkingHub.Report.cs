@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
 
@@ -31,44 +31,54 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
-                // Validate customer exists
+                var categoryExists = await _context.ReportCategories
+                    .AnyAsync(c => c.CategoryId == report.CategoryId && c.IsActive);
+
+                if (!categoryExists)
+                    throw new HubException("Invalid category selected");
+
                 var customerExists = await _context.Customers
                     .AnyAsync(c => c.CustomerId == report.CustomerId);
-                
-                if (!customerExists)
-                {
-                    throw new HubException($"Customer with ID {report.CustomerId} does not exist");
-                }
 
-                // Validate category exists
-                var categoryExists = await _context.ReportCategories
-                    .AnyAsync(c => c.CategoryId == report.CategoryId);
-                
-                if (!categoryExists)
-                {
-                    throw new HubException($"Category with ID {report.CategoryId} does not exist");
-                }
+                if (!customerExists)
+                    throw new HubException("Customer not found");
 
                 report.ReportId = Guid.NewGuid();
                 report.Status = "Pending";
                 report.CreatedDate = DateTime.Now;
-                
+                report.UpdatedDate = null;
+                report.ResolvedDate = null;
+                report.AssignedStaffId = null;
+                report.ResolutionNote = null;
+                report.Rating = null;
+
+                report.Customer = null;
+                report.Category = null;
+                report.AssignedStaff = null;
+
                 _context.CustomerReports.Add(report);
                 await _context.SaveChangesAsync();
 
-                // Load related data
                 var createdReport = await _context.CustomerReports
                     .Include(r => r.Customer)
                     .Include(r => r.Category)
+                    .AsNoTracking()
                     .FirstAsync(r => r.ReportId == report.ReportId);
 
-                // Broadcast to staff
-                await Clients.Group("Staff").SendAsync("OnNewReportCreated", createdReport);
+                // ⭐ Broadcast to ALL clients (not just Staff group)
+                await Clients.All.SendAsync("OnNewReportCreated", createdReport);
 
                 return createdReport;
             }
+            catch (DbUpdateException dbEx)
+            {
+                var innerMessage = dbEx.InnerException?.Message ?? dbEx.Message;
+                Console.WriteLine($"DB Error: {innerMessage}");
+                throw new HubException($"Database error: {innerMessage}");
+            }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error creating report: {ex.Message}");
                 throw new HubException($"Error creating report: {ex.Message}");
             }
         }
@@ -87,6 +97,7 @@ namespace ParkingSystem.Server.Hubs
                     .Include(r => r.ReportComments)
                     .Where(r => r.CustomerId == customerId)
                     .OrderByDescending(r => r.CreatedDate)
+                    .AsNoTracking()
                     .ToListAsync();
             }
             catch (Exception ex)
@@ -108,6 +119,7 @@ namespace ParkingSystem.Server.Hubs
                     .Include(r => r.AssignedStaff)
                     .Include(r => r.ReportComments)
                     .Include(r => r.ReportAttachments)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.ReportId == reportId);
 
                 if (report == null)
@@ -130,10 +142,10 @@ namespace ParkingSystem.Server.Hubs
             {
                 comment.CommentId = Guid.NewGuid();
                 comment.CreatedDate = DateTime.Now;
+                comment.Report = null;
 
                 _context.ReportComments.Add(comment);
 
-                // Update report's UpdatedDate
                 var report = await _context.CustomerReports.FindAsync(comment.ReportId);
                 if (report != null)
                 {
@@ -142,9 +154,8 @@ namespace ParkingSystem.Server.Hubs
 
                 await _context.SaveChangesAsync();
 
-                // Real-time broadcast to report watchers
-                await Clients.Group($"Report_{comment.ReportId}")
-                    .SendAsync("OnNewCommentAdded", comment);
+                // ⭐ Broadcast to ALL clients
+                await Clients.All.SendAsync("OnNewCommentAdded", comment);
 
                 return comment;
             }
@@ -157,7 +168,7 @@ namespace ParkingSystem.Server.Hubs
         // ============================
         // Update Report Status (Staff only)
         // ============================
-        public async Task<bool> UpdateReportStatus(Guid reportId, string status, Guid? staffId = null, string resolutionNote = null)
+        public async Task<bool> UpdateReportStatus(Guid reportId, string status , string resolutionNote=null)
         {
             try
             {
@@ -168,8 +179,6 @@ namespace ParkingSystem.Server.Hubs
                 report.Status = status;
                 report.UpdatedDate = DateTime.Now;
 
-                if (staffId.HasValue)
-                    report.AssignedStaffId = staffId;
 
                 if (!string.IsNullOrEmpty(resolutionNote))
                     report.ResolutionNote = resolutionNote;
@@ -179,9 +188,8 @@ namespace ParkingSystem.Server.Hubs
 
                 await _context.SaveChangesAsync();
 
-                // Real-time notification to customer
-                await Clients.User(report.CustomerId.ToString())
-                    .SendAsync("OnReportStatusUpdated", reportId, status);
+                // ⭐ Broadcast to ALL clients
+                await Clients.All.SendAsync("OnReportStatusUpdated", reportId, status);
 
                 return true;
             }
@@ -208,6 +216,9 @@ namespace ParkingSystem.Server.Hubs
                 report.Rating = rating;
                 await _context.SaveChangesAsync();
 
+                // ⭐ Broadcast rating update to ALL
+                await Clients.All.SendAsync("OnReportRated", reportId, rating);
+
                 return true;
             }
             catch (Exception ex)
@@ -225,6 +236,7 @@ namespace ParkingSystem.Server.Hubs
             {
                 var reports = await _context.CustomerReports
                     .Where(r => r.CustomerId == customerId)
+                    .AsNoTracking()
                     .ToListAsync();
 
                 var resolvedReports = reports

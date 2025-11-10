@@ -34,6 +34,7 @@ public partial class ParkingManagementContext : DbContext
     public virtual DbSet<Staff> Staff { get; set; }
 
     public virtual DbSet<Vehicle> Vehicles { get; set; }
+    public virtual DbSet<ParkingPrice> ParkingPrices { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -111,7 +112,40 @@ public partial class ParkingManagementContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__CustomerR__Custo__6754599E");
         });
-
+        modelBuilder.Entity<ParkingPrice>().HasData(
+            new ParkingPrice
+            {
+                PriceId = Guid.NewGuid(),
+                VehicleType = "Xe máy",
+                PricePerHour = 5000,
+                IsActive = true,
+                CreatedDate = DateTime.Now
+            },
+            new ParkingPrice
+            {
+                PriceId = Guid.NewGuid(),
+                VehicleType = "Ô tô",
+                PricePerHour = 15000,
+                IsActive = true,
+                CreatedDate = DateTime.Now
+            },
+            new ParkingPrice
+            {
+                PriceId = Guid.NewGuid(),
+                VehicleType = "Xe đạp",
+                PricePerHour = 3000,
+                IsActive = true,
+                CreatedDate = DateTime.Now
+            },
+            new ParkingPrice
+            {
+                PriceId = Guid.NewGuid(),
+                VehicleType = "Xe tải",
+                PricePerHour = 25000,
+                IsActive = true,
+                CreatedDate = DateTime.Now
+            }
+        );
         modelBuilder.Entity<ParkingRegistration>(entity =>
         {
             entity.HasKey(e => e.RegistrationId).HasName("PK__ParkingR__6EF58830A5FDD2FF");

@@ -7,6 +7,368 @@ namespace ParkingSystem.Server.Hubs
 {
     public partial class ParkingHub
     {
+        public async Task<ParkingHistoryResponse> GetCustomerParkingHistory(Guid customerId)
+        {
+            try
+            {
+                var histories = await _context.ParkingRegistrations
+                    .Include(pr => pr.Vehicle)
+                    .Include(pr => pr.Slot)
+                    .Include(pr => pr.Staff)
+                    .Where(pr => pr.Vehicle.CustomerId == customerId)
+                    .OrderByDescending(pr => pr.CheckInTime)
+                    .Select(pr => new ParkingHistoryDto
+                    {
+                        RegistrationID = pr.RegistrationId,
+                        PlateNumber = pr.Vehicle.PlateNumber,
+                        VehicleType = pr.Vehicle.VehicleType ?? "N/A",
+                        SlotCode = pr.Slot.SlotCode,
+                        CheckInTime = pr.CheckInTime,
+                        CheckOutTime = pr.CheckOutTime,
+                        Status = pr.Status,
+                        StaffName = pr.Staff != null ? pr.Staff.FullName : null
+                    })
+                    .ToListAsync();
+
+                var activeCount = histories.Count(h => h.Status == "Active");
+
+                return new ParkingHistoryResponse
+                {
+                    Success = true,
+                    Message = "Lấy lịch sử thành công",
+                    Histories = histories,
+                    TotalRecords = histories.Count,
+                    ActiveParking = activeCount
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetCustomerParkingHistory Error] {ex.Message}");
+                return new ParkingHistoryResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}",
+                    Histories = new List<ParkingHistoryDto>(),
+                    TotalRecords = 0,
+                    ActiveParking = 0
+                };
+            }
+        }
+
+        /// <summary>
+        /// Broadcast khi có check-in mới (để update real-time cho trang history)
+        /// </summary>
+        public async Task NotifyNewCheckIn(Guid customerId, ParkingHistoryDto newHistory)
+        {
+            await Clients.All.SendAsync("OnNewCheckIn", customerId, newHistory);
+        }
+
+        /// <summary>
+        /// Broadcast khi có check-out (để update real-time cho trang history)
+        /// </summary>
+        public async Task NotifyCheckOut(Guid customerId, Guid registrationId)
+        {
+            await Clients.All.SendAsync("OnCheckOut", customerId, registrationId);
+        }
+        // ============ STAFF REGISTRATION WORKFLOW ============
+
+        /// <summary>
+        /// Bước 1: Kiểm tra customer theo số điện thoại
+        /// </summary>
+        public async Task<CustomerCheckResult> CheckCustomerByPhone(string phoneNumber)
+        {
+            try
+            {
+                _logger.LogInformation($"Checking customer with phone: {phoneNumber}");
+
+                var customer = await _context.Customers
+                    .Include(c => c.Vehicles)
+                    .FirstOrDefaultAsync(c => c.Phone == phoneNumber);
+
+                if (customer == null)
+                {
+                    return new CustomerCheckResult
+                    {
+                        Exists = false,
+                        Phone = phoneNumber,
+                        Vehicles = new List<VehicleSummaryDto>()
+                    };
+                }
+
+                // Lấy danh sách xe và kiểm tra xe nào đang đỗ
+                var vehicles = new List<VehicleSummaryDto>();
+                
+                foreach (var vehicle in customer.Vehicles)
+                {
+                    var activeReg = await _context.ParkingRegistrations
+                        .Include(r => r.Slot)
+                        .FirstOrDefaultAsync(r => 
+                            r.VehicleId == vehicle.VehicleId && 
+                            (r.Status == "Active" || r.Status == "CheckedIn"));
+
+                    vehicles.Add(new VehicleSummaryDto
+                    {
+                        VehicleId = vehicle.VehicleId,
+                        PlateNumber = vehicle.PlateNumber,
+                        VehicleType = vehicle.VehicleType ?? "N/A",
+                        IsCurrentlyParked = activeReg != null,
+                        CurrentSlotCode = activeReg?.Slot?.SlotCode
+                    });
+                }
+
+                return new CustomerCheckResult
+                {
+                    Exists = true,
+                    CustomerId = customer.CustomerId,
+                    FullName = customer.FullName,
+                    Email = customer.Email,
+                    Phone = customer.Phone,
+                    Vehicles = vehicles
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking customer by phone");
+                throw new HubException($"Error checking customer: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Đăng ký parking cho Staff - Xử lý toàn bộ flow
+        /// </summary>
+        public async Task<RegisterParkingResponse> StaffRegisterParking(StaffRegisterParkingRequest request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                _logger.LogInformation($"Staff registering parking for slot {request.SlotId}");
+
+                // 1. Kiểm tra slot
+                var slot = await _context.ParkingSlots.FindAsync(request.SlotId);
+                if (slot == null)
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy chỗ đỗ"
+                    };
+                }
+
+                if (slot.Status != "Available")
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = "Chỗ đỗ này đã được sử dụng"
+                    };
+                }
+
+                // 2. Xử lý Customer
+                Customer customer;
+                
+                if (request.CustomerId.HasValue)
+                {
+                    // Customer đã tồn tại
+                    customer = await _context.Customers.FindAsync(request.CustomerId.Value);
+                    if (customer == null)
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy khách hàng"
+                        };
+                    }
+                }
+                else
+                {
+                    // Tạo customer mới
+                    if (string.IsNullOrWhiteSpace(request.CustomerName))
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = "Vui lòng nhập tên khách hàng"
+                        };
+                    }
+
+                    // Kiểm tra số điện thoại đã tồn tại chưa
+                    var existingCustomer = await _context.Customers
+                        .FirstOrDefaultAsync(c => c.Phone == request.CustomerPhone);
+                    
+                    if (existingCustomer != null)
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = "Số điện thoại này đã được đăng ký. Vui lòng kiểm tra lại."
+                        };
+                    }
+
+                    customer = new Customer
+                    {
+                        CustomerId = Guid.NewGuid(),
+                        FullName = request.CustomerName,
+                        Phone = request.CustomerPhone,
+                        Email = request.CustomerEmail,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword($"customer_{request.CustomerPhone}") // Default password
+                    };
+                    
+                    _context.Customers.Add(customer);
+                    _logger.LogInformation($"Created new customer: {customer.FullName} - {customer.Phone}");
+                }
+
+                // 3. Xử lý Vehicle
+                Vehicle vehicle;
+
+                if (request.VehicleId.HasValue)
+                {
+                    // Xe đã tồn tại - Kiểm tra xe có đang đỗ không
+                    vehicle = await _context.Vehicles.FindAsync(request.VehicleId.Value);
+                    if (vehicle == null)
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy xe"
+                        };
+                    }
+
+                    // Kiểm tra xe có đang đỗ ở slot khác không
+                    var existingActiveReg = await _context.ParkingRegistrations
+                        .Include(r => r.Slot)
+                        .FirstOrDefaultAsync(r => 
+                            r.VehicleId == vehicle.VehicleId && 
+                            (r.Status == "Active" || r.Status == "CheckedIn"));
+
+                    if (existingActiveReg != null)
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = $"Xe {vehicle.PlateNumber} đang đỗ ở chỗ {existingActiveReg.Slot?.SlotCode}. Vui lòng check-out trước."
+                        };
+                    }
+                }
+                else
+                {
+                    // Tạo xe mới
+                    if (string.IsNullOrWhiteSpace(request.PlateNumber))
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = "Vui lòng nhập biển số xe"
+                        };
+                    }
+
+                    // Kiểm tra biển số đã tồn tại chưa
+                    var existingVehicle = await _context.Vehicles
+                        .FirstOrDefaultAsync(v => v.PlateNumber == request.PlateNumber);
+
+                    if (existingVehicle != null)
+                    {
+                        // Nếu xe đã tồn tại nhưng thuộc về customer này
+                        if (existingVehicle.CustomerId == customer.CustomerId)
+                        {
+                            vehicle = existingVehicle;
+                            _logger.LogInformation($"Using existing vehicle: {vehicle.PlateNumber}");
+                        }
+                        else
+                        {
+                            return new RegisterParkingResponse
+                            {
+                                Success = false,
+                                Message = $"Biển số {request.PlateNumber} đã được đăng ký bởi khách hàng khác"
+                            };
+                        }
+                    }
+                    else
+                    {
+                        vehicle = new Vehicle
+                        {
+                            VehicleId = Guid.NewGuid(),
+                            PlateNumber = request.PlateNumber,
+                            VehicleType = request.VehicleType,
+                            CustomerId = customer.CustomerId
+                        };
+                        
+                        _context.Vehicles.Add(vehicle);
+                        _logger.LogInformation($"Created new vehicle: {vehicle.PlateNumber}");
+                    }
+                }
+
+                // 4. Tạo parking registration
+                var registration = new ParkingRegistration
+                {
+                    RegistrationId = Guid.NewGuid(),
+                    VehicleId = vehicle.VehicleId,
+                    SlotId = request.SlotId,
+                    StaffId = request.StaffId,
+                    CheckInTime = DateTime.Now,
+                    Status = "Active"
+                };
+                
+                _context.ParkingRegistrations.Add(registration);
+
+                // 5. Cập nhật trạng thái slot
+                slot.Status = "InUse";
+
+                // 6. Lưu tất cả thay đổi
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // 7. Load lại thông tin slot để trả về
+                var updatedSlot = await _context.ParkingSlots
+                    .Include(s => s.ParkingRegistrations.Where(r => r.Status == "Active"))
+                    .ThenInclude(r => r.Vehicle)
+                    .ThenInclude(v => v.Customer)
+                    .FirstOrDefaultAsync(s => s.SlotId == request.SlotId);
+
+                var currentReg = updatedSlot?.ParkingRegistrations.FirstOrDefault();
+
+                var slotDto = new ParkingSlotDto
+                {
+                    SlotId = updatedSlot!.SlotId,
+                    SlotCode = updatedSlot.SlotCode,
+                    Status = updatedSlot.Status,
+                    CurrentRegistrationId = currentReg?.RegistrationId,
+                    VehiclePlateNumber = currentReg?.Vehicle?.PlateNumber,
+                    VehicleType = currentReg?.Vehicle?.VehicleType,
+                    CustomerName = currentReg?.Vehicle?.Customer?.FullName,
+                    CustomerPhone = currentReg?.Vehicle?.Customer?.Phone,
+                    CheckInTime = currentReg?.CheckInTime
+                };
+
+                _logger.LogInformation($"Successfully registered parking: Slot {slot.SlotCode}, Vehicle {vehicle.PlateNumber}");
+
+                var response = new RegisterParkingResponse
+                {
+                    Success = true,
+                    Message = "Đăng ký chỗ đỗ thành công",
+                    RegistrationId = registration.RegistrationId,
+                    CustomerId = customer.CustomerId,
+                    VehicleId = vehicle.VehicleId,
+                    CheckInTime = registration.CheckInTime,
+                    UpdatedSlot = slotDto
+                };
+
+                // Broadcast to all clients
+                await Clients.All.SendAsync("OnParkingRegistered", response);
+                await Clients.All.SendAsync("OnSlotUpdated", slotDto);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error in StaffRegisterParking");
+                return new RegisterParkingResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi server: {ex.Message}"
+                };
+            }
+        }
         // ============ PARKING SLOT OPERATIONS ============
 
         public async Task<List<ParkingSlotDto>> GetAllSlots()
@@ -31,7 +393,7 @@ namespace ParkingSystem.Server.Hubs
                 throw new HubException($"Error getting slots: {ex.Message}");
             }
         }
-
+        
         public async Task<List<ParkingAreaDto>> GetSlotsByArea()
         {
             try
@@ -80,6 +442,7 @@ namespace ParkingSystem.Server.Hubs
                                 CurrentRegistrationId = currentReg?.RegistrationId,
                                 VehiclePlateNumber = currentReg?.Vehicle?.PlateNumber,
                                 VehicleType = currentReg?.Vehicle?.VehicleType,
+                                CustomerId =currentReg?.Vehicle?.CustomerId,
                                 CustomerName = currentReg?.Vehicle?.Customer?.FullName,
                                 CustomerPhone = currentReg?.Vehicle?.Customer?.Phone,
                                 CheckInTime = currentReg?.CheckInTime
@@ -164,6 +527,7 @@ namespace ParkingSystem.Server.Hubs
                     CurrentRegistrationId = currentReg?.RegistrationId,
                     VehiclePlateNumber = currentReg?.Vehicle?.PlateNumber,
                     VehicleType = currentReg?.Vehicle?.VehicleType,
+                    CustomerId = currentReg?.Vehicle?.CustomerId,
                     CustomerName = currentReg?.Vehicle?.Customer?.FullName,
                     CustomerPhone = currentReg?.Vehicle?.Customer?.Phone,
                     CheckInTime = currentReg?.CheckInTime
@@ -346,6 +710,7 @@ namespace ParkingSystem.Server.Hubs
                     CurrentRegistrationId = currentReg?.RegistrationId,
                     VehiclePlateNumber = currentReg?.Vehicle?.PlateNumber,
                     VehicleType = currentReg?.Vehicle?.VehicleType,
+                    CustomerId = currentReg?.Vehicle?.CustomerId,
                     CustomerName = currentReg?.Vehicle?.Customer?.FullName,
                     CustomerPhone = currentReg?.Vehicle?.Customer?.Phone,
                     CheckInTime = currentReg?.CheckInTime
@@ -360,6 +725,157 @@ namespace ParkingSystem.Server.Hubs
                     RegistrationId = registration.RegistrationId,
                     CustomerId = customer.CustomerId,
                     VehicleId = vehicle.VehicleId,
+                    CheckInTime = registration.CheckInTime,
+                    UpdatedSlot = slotDto
+                };
+
+                // Broadcast to all clients
+                await Clients.All.SendAsync("OnParkingRegistered", response);
+                await Clients.All.SendAsync("OnSlotUpdated", slotDto);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Lỗi khi đăng ký parking");
+                return new RegisterParkingResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi server: {ex.Message}"
+                };
+            }
+        }
+
+
+        public async Task<RegisterParkingResponse> RegisterParkingCustomer(RegisterParkingRequest request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Kiểm tra slot có tồn tại và available không
+                var slot = await _context.ParkingSlots.FindAsync(request.SlotId);
+                if (slot == null)
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy chỗ đỗ"
+                    };
+                }
+
+                if (slot.Status != "Available")
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = "Chỗ đỗ này đã được sử dụng"
+                    };
+                }
+
+                // 2. Tìm hoặc tạo khách hàng
+                Customer? customer;
+                if (request.CustomerId.HasValue)
+                {
+                    customer = await _context.Customers.FindAsync(request.CustomerId.Value);
+                    if (customer == null)
+                    {
+                        return new RegisterParkingResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy khách hàng"
+                        };
+                    }
+                }
+                // 3. ⭐ KIỂM TRA XE ĐÃ ĐANG ĐỖ Ở SLOT KHÁC CHƯA
+                var existingActiveRegistration = await _context.ParkingRegistrations
+                    .Include(r => r.Slot)
+                    .FirstOrDefaultAsync(r =>
+                        r.VehicleId == request.VehicleId &&
+                        (r.Status == "Active" || r.Status == "CheckedIn"));
+
+                if (existingActiveRegistration != null)
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = $"Xe này đang đỗ ở chỗ {existingActiveRegistration.Slot?.SlotCode}. Vui lòng check-out trước khi đăng ký chỗ mới."
+                    };
+                }
+
+                // 4. Kiểm tra vehicle có tồn tại và thuộc về customer này không
+                var vehicle = await _context.Vehicles
+                    .FirstOrDefaultAsync(v => v.VehicleId == request.VehicleId);
+
+                if (vehicle == null)
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy xe"
+                    };
+                }
+
+                if (vehicle.CustomerId != request.CustomerId.Value)
+                {
+                    return new RegisterParkingResponse
+                    {
+                        Success = false,
+                        Message = "Xe này không thuộc về bạn"
+                    };
+                }
+
+                // 4. Tạo parking registration
+                var registration = new ParkingRegistration
+                {
+                    RegistrationId = Guid.NewGuid(),
+                    VehicleId = request.VehicleId,
+                    SlotId = request.SlotId,
+                    CheckInTime = DateTime.Now,
+                    Status = "Active"
+                };
+
+                _context.ParkingRegistrations.Add(registration);
+
+                // 5. Cập nhật trạng thái slot
+                slot.Status = "InUse";
+
+                // 6. Lưu tất cả thay đổi
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // 7. Load lại thông tin slot để trả về
+                var updatedSlot = await _context.ParkingSlots
+                    .Include(s => s.ParkingRegistrations.Where(r => r.Status == "Active"))
+                    .ThenInclude(r => r.Vehicle)
+                    .ThenInclude(v => v.Customer)
+                    .FirstOrDefaultAsync(s => s.SlotId == request.SlotId);
+
+                var currentReg = updatedSlot?.ParkingRegistrations.FirstOrDefault();
+
+                var slotDto = new ParkingSlotDto
+                {
+                    SlotId = updatedSlot!.SlotId,
+                    SlotCode = updatedSlot.SlotCode,
+                    Status = updatedSlot.Status,
+                    CurrentRegistrationId = currentReg?.RegistrationId,
+                    VehiclePlateNumber = currentReg?.Vehicle?.PlateNumber,
+                    VehicleType = currentReg?.Vehicle?.VehicleType,
+                    CustomerId = currentReg?.Vehicle?.CustomerId,
+                    CustomerName = currentReg?.Vehicle?.Customer?.FullName,
+                    CustomerPhone = currentReg?.Vehicle?.Customer?.Phone,
+                    CheckInTime = currentReg?.CheckInTime
+                };
+
+                _logger.LogInformation($"Successfully registered parking for slot {slot.SlotCode}");
+
+                var response = new RegisterParkingResponse
+                {
+                    Success = true,
+                    Message = "Đăng ký chỗ đỗ thành công",
+                    RegistrationId = registration.RegistrationId,
+                    CustomerId = request.CustomerId,
+                    VehicleId = request.VehicleId,
                     CheckInTime = registration.CheckInTime,
                     UpdatedSlot = slotDto
                 };
@@ -516,6 +1032,7 @@ namespace ParkingSystem.Server.Hubs
                                 CurrentRegistrationId = isMySlot ? currentReg?.RegistrationId : null,
                                 VehiclePlateNumber = isMySlot ? currentReg?.Vehicle?.PlateNumber : null,
                                 VehicleType = isMySlot ? currentReg?.Vehicle?.VehicleType : null,
+                                CustomerId = isMySlot ? currentReg?.Vehicle?.CustomerId : null,
                                 CustomerPhone = isMySlot ? currentReg?.Vehicle?.Customer?.Phone : null,
                                 CheckInTime = isMySlot ? currentReg?.CheckInTime : null
                             };

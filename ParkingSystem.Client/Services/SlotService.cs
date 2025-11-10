@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
-using ParkingSystem.Shared.Models;
-using ParkingSystem.Shared.DTOs;
 using Microsoft.Extensions.Logging;
+using ParkingSystem.Shared.DTOs;
+using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Client.Services
 {
@@ -15,6 +15,8 @@ namespace ParkingSystem.Client.Services
         public event Action<ParkingSlotDto>? OnSlotUpdated;
         public event Action<RegisterParkingResponse>? OnParkingRegistered;
         public event Action<Guid>? OnSlotCheckedOut;
+        public event Action<Guid, ParkingHistoryDto>? OnNewCheckIn;
+        public event Action<Guid, Guid>? OnCheckOut;
 
         public bool IsConnected => Connection?.State == HubConnectionState.Connected;
 
@@ -50,6 +52,19 @@ namespace ParkingSystem.Client.Services
                 _logger.LogInformation($"[Real-time] Slot checked out: {slotId}");
                 OnSlotCheckedOut?.Invoke(slotId);
             });
+
+            Connection.On<Guid, ParkingHistoryDto>("OnNewCheckIn", (customerId, history) =>
+            {
+                Console.WriteLine($"[SignalR Event] New check-in for customer {customerId}");
+                OnNewCheckIn?.Invoke(customerId, history);
+            });
+
+            // Listen to check-out
+            Connection.On<Guid, Guid>("OnCheckOut", (customerId, registrationId) =>
+            {
+                Console.WriteLine($"[SignalR Event] Check-out for registration {registrationId}");
+                OnCheckOut?.Invoke(customerId, registrationId);
+            });
         }
 
         // ============ HELPER METHODS ============
@@ -81,7 +96,36 @@ namespace ParkingSystem.Client.Services
                 return false;
             }
         }
+        public async Task<ParkingHistoryResponse> GetMyHistoryAsync(Guid customerId)
+        {
+            try
+            {
+                EnsureConnected();
 
+                Console.WriteLine($"[GetMyHistoryAsync] Requesting history for customer {customerId}");
+
+                var response = await Connection.InvokeAsync<ParkingHistoryResponse>(
+                    "GetCustomerParkingHistory",
+                    customerId
+                );
+
+                Console.WriteLine($"[GetMyHistoryAsync] Received {response.TotalRecords} records");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetMyHistoryAsync Error] {ex.Message}");
+                return new ParkingHistoryResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi khi tải lịch sử: {ex.Message}",
+                    Histories = new List<ParkingHistoryDto>(),
+                    TotalRecords = 0,
+                    ActiveParking = 0
+                };
+            }
+        }
         // ============ PARKING SLOT OPERATIONS (STAFF) ============
 
         public async Task<List<ParkingSlotDto>> GetAllSlotsAsync()
@@ -190,6 +234,124 @@ namespace ParkingSystem.Client.Services
             }
         }
 
+        // ============ NEW: Get Active Registrations ============
+        
+        /// <summary>
+        /// Lấy danh sách xe đang đỗ của customer
+        /// </summary>
+        //public async Task<List<ActiveRegistrationDto>> GetMyActiveRegistrations(Guid customerId)
+        //{
+        //    EnsureConnected();
+        //    try
+        //    {
+        //        return await Connection.InvokeAsync<List<ActiveRegistrationDto>>("GetMyActiveRegistrations", customerId);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error getting active registrations");
+        //        throw;
+        //    }
+        //}
+
+        // ============ STAFF REGISTRATION WORKFLOW ============
+
+        /// <summary>
+        /// Kiểm tra customer theo số điện thoại (Staff)
+        /// </summary>
+        public async Task<CustomerCheckResult> CheckCustomerByPhone(string phoneNumber)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CustomerCheckResult>("CheckCustomerByPhone", phoneNumber);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking customer by phone");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Đăng ký parking cho Staff (bao gồm tạo customer/vehicle mới)
+        /// </summary>
+        public async Task<RegisterParkingResponse> StaffRegisterParking(StaffRegisterParkingRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<RegisterParkingResponse>("StaffRegisterParking", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in staff registration");
+                return new RegisterParkingResponse 
+                { 
+                    Success = false, 
+                    Message = $"Lỗi kết nối: {ex.Message}" 
+                };
+            }
+        }
+        /// <summary>
+        /// Lấy danh sách bảng giá
+        /// </summary>
+        public async Task<List<ParkingPriceDto>> GetParkingPrices()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<List<ParkingPriceDto>>("GetParkingPrices");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting parking prices");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Tính phí trước khi check-out
+        /// </summary>
+        public async Task<CalculateFeeResponse> CalculateParkingFee(Guid registrationId)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CalculateFeeResponse>("CalculateParkingFee", registrationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating fee");
+                return new CalculateFeeResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi tính phí: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Check-out với payment
+        /// </summary>
+        public async Task<CheckOutWithPaymentResponse> CheckOutWithPayment(CheckOutWithPaymentRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CheckOutWithPaymentResponse>("CheckOutWithPayment", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in check-out with payment");
+                return new CheckOutWithPaymentResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+
+
         // ============ PARKING REGISTRATION OPERATIONS ============
 
         public async Task<RegisterParkingResponse> RegisterParkingAsync(RegisterParkingRequest request)
@@ -197,7 +359,7 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await Connection.InvokeAsync<RegisterParkingResponse>("RegisterParking", request);
+                return await Connection.InvokeAsync<RegisterParkingResponse>("RegisterParkingCustomer", request);
             }
             catch (Exception ex)
             {

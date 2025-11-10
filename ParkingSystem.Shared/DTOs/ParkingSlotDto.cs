@@ -16,6 +16,7 @@ public class ParkingSlotDto
     public Guid? CurrentRegistrationId { get; set; }
     public string? VehiclePlateNumber { get; set; }
     public string? VehicleType { get; set; }
+    public Guid? CustomerId { get; set; }
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public DateTime? CheckInTime { get; set; }
@@ -38,6 +39,71 @@ public class ParkingSlotDto
             return null;
         }
     }
+}
+
+public class ParkingHistoryDto
+{
+    public Guid RegistrationID { get; set; }
+    public string PlateNumber { get; set; } = string.Empty;
+    public string VehicleType { get; set; } = string.Empty;
+    public string SlotCode { get; set; } = string.Empty;
+    public DateTime CheckInTime { get; set; }
+    public DateTime? CheckOutTime { get; set; }
+    public string Status { get; set; } = string.Empty; // InUse, CheckedOut
+    public string? StaffName { get; set; }
+
+    // Computed properties
+    public string Duration
+    {
+        get
+        {
+            if (CheckOutTime.HasValue)
+            {
+                var duration = CheckOutTime.Value - CheckInTime;
+                if (duration.TotalDays >= 1)
+                    return $"{(int)duration.TotalDays} ngày {duration.Hours}h {duration.Minutes}m";
+                else if (duration.TotalHours >= 1)
+                    return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+                else
+                    return $"{duration.Minutes}m";
+            }
+            else
+            {
+                var duration = DateTime.Now - CheckInTime;
+                if (duration.TotalDays >= 1)
+                    return $"{(int)duration.TotalDays} ngày {duration.Hours}h {duration.Minutes}m";
+                else if (duration.TotalHours >= 1)
+                    return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+                else
+                    return $"{duration.Minutes}m";
+            }
+        }
+    }
+
+    public string StatusText => Status switch
+    {
+        "Active" => "Đang đỗ",
+        "CheckedOut" => "Đã hoàn thành",
+        _ => "Không xác định"
+    };
+
+    public string StatusColor => Status switch
+    {
+        "Active" => "success",
+        "CheckedOut" => "secondary",
+        _ => "warning"
+    };
+
+    public bool IsActive => Status == "Active";
+}
+
+public class ParkingHistoryResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<ParkingHistoryDto> Histories { get; set; } = new();
+    public int TotalRecords { get; set; }
+    public int ActiveParking { get; set; } // Số xe đang đỗ
 }
 
 /// <summary>
@@ -82,6 +148,7 @@ public class CustomerParkingSlotDto
     public Guid? CurrentRegistrationId { get; set; }
     public string? VehiclePlateNumber { get; set; }
     public string? VehicleType { get; set; }
+    public Guid? CustomerId { get; set; }
     public string? CustomerPhone { get; set; }
     public DateTime? CheckInTime { get; set; }
     
@@ -120,4 +187,85 @@ public class CustomerParkingAreaDto
         ? Math.Round((double)OccupiedSlots / TotalSlots * 100, 1) 
         : 0;
 }
+
+/// <summary>
+    /// Response khi Staff kiểm tra số điện thoại customer
+    /// </summary>
+    public class CustomerCheckResult
+    {
+        public bool Exists { get; set; }
+        public Guid? CustomerId { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string Phone { get; set; } = string.Empty;
+        public List<VehicleSummaryDto> Vehicles { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Thông tin tóm tắt về xe của customer
+    /// </summary>
+    public class VehicleSummaryDto
+    {
+        public Guid VehicleId { get; set; }
+        public string PlateNumber { get; set; } = string.Empty;
+        public string VehicleType { get; set; } = string.Empty;
+        public bool IsCurrentlyParked { get; set; }
+        public string? CurrentSlotCode { get; set; } // Slot đang đỗ (nếu có)
+    }
+
+    /// <summary>
+    /// Request tạo customer mới từ Staff
+    /// </summary>
+    public class CreateCustomerRequest
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string? Email { get; set; }
+    }
+
+    /// <summary>
+    /// Response sau khi tạo customer
+    /// </summary>
+    public class CreateCustomerResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public Guid? CustomerId { get; set; }
+    }
+
+    /// <summary>
+    /// Request đăng ký parking cho Staff (bao gồm cả tạo customer/vehicle mới)
+    /// </summary>
+    public class StaffRegisterParkingRequest
+    {
+        // Thông tin slot
+        public Guid SlotId { get; set; }
+        public Guid StaffId { get; set; }
+
+        // Thông tin customer
+        public Guid? CustomerId { get; set; } // Nếu đã tồn tại
+        public string CustomerPhone { get; set; } = string.Empty;
+        public string? CustomerName { get; set; } // Nếu tạo mới
+        public string? CustomerEmail { get; set; } // Nếu tạo mới
+
+        // Thông tin vehicle
+        public Guid? VehicleId { get; set; } // Nếu chọn xe có sẵn
+        public string PlateNumber { get; set; } = string.Empty; // Nếu tạo xe mới
+        public string VehicleType { get; set; } = string.Empty; // Nếu tạo xe mới
+    }
+
+    /// <summary>
+    /// Dữ liệu xác nhận trước khi đăng ký cuối cùng
+    /// </summary>
+    public class RegistrationConfirmation
+    {
+        public string SlotCode { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string CustomerPhone { get; set; } = string.Empty;
+        public string? CustomerEmail { get; set; }
+        public string VehiclePlateNumber { get; set; } = string.Empty;
+        public string VehicleType { get; set; } = string.Empty;
+        public bool IsNewCustomer { get; set; }
+        public bool IsNewVehicle { get; set; }
+    }
 

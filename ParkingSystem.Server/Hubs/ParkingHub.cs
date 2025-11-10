@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
+using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Server.Hubs
 {

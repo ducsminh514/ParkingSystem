@@ -14,7 +14,7 @@ public class RegisterParkingRequest
     public string CustomerName { get; set; } = null!;
     public string CustomerPhone { get; set; } = null!;
     public string? CustomerEmail { get; set; }
-    
+    public Guid? VehicleId { get; set; }
     // Thông tin xe
     public string PlateNumber { get; set; } = null!;
     public string VehicleType { get; set; } = null!;

@@ -3,6 +3,7 @@
 @using ParkingSystem.Shared.Models
 @inject IReportService ReportService
 @inject NavigationManager Navigation
+@inject UserService UserService
 @implements IDisposable
 
 <div class="container mt-4">
@@ -126,7 +127,7 @@
                         @if (report.ReportComments.Any())
                         {
                             <div class="comments-list">
-                                @foreach (var comment in report.ReportComments.OrderBy(c => c.CreatedDate))
+                                @foreach (var comment in report.ReportComments.Where(c => !c.IsInternal ).OrderBy(c => c.CreatedDate))
                                 {
                                     <div class="mb-3 p-3 border rounded @(comment.UserType == "Staff" ? "bg-light" : "")">
                                         <div class="d-flex justify-content-between mb-2">
@@ -267,14 +268,14 @@
     private int selectedRating = 0;
     private string newComment = string.Empty;
 
-    private Guid currentCustomerId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private Guid currentCustomerId ;
 
     protected override async Task OnInitializedAsync()
     {
         // Subscribe to real-time events
         ReportService.OnReportStatusUpdated += HandleReportStatusUpdated;
         ReportService.OnNewCommentAdded += HandleNewCommentAdded;
-
+        currentCustomerId = await UserService.GetCurrentUserId();
         await LoadReportDetail();
     }
 
@@ -398,9 +399,13 @@
         {
             return report?.Customer?.FullName ?? "Customer";
         }
-        else
+        else if(comment.UserType == "Staff")
         {
             return report?.AssignedStaff?.FullName ?? "Staff";
+        }
+        else
+        {
+            return "Admin";
         }
     }
 

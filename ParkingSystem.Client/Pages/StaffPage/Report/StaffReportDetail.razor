@@ -1,0 +1,516 @@
+@page "/staff/reports/{ReportId:guid}"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Client.Services
+@inject IReportService ReportService
+@inject NavigationManager Navigation
+@inject UserService UserService
+@implements IDisposable
+
+
+<div class="container mt-4">
+    <div class="mb-3">
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <span class="oi oi-arrow-left"></span> Back to My Reports
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (report == null)
+    {
+        <div class="alert alert-danger">Report not found</div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h4 class="mb-2">@report.Title</h4>
+                        <span class="badge badge-@GetStatusColor(report.Status) me-2">@report.Status</span>
+                        <span class="badge badge-@GetPriorityColor(report.Priority)">@report.Priority Priority</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block">
+                                <strong>Customer:</strong> @report.Customer?.FullName
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>Phone:</strong> @report.Customer?.Phone
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>Email:</strong> @report.Customer?.Email
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>Category:</strong> @report.Category?.CategoryName
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>Created:</strong> @report.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                        </div>
+
+                        <hr/>
+
+                        <div class="report-content">
+                            <h6>Issue Description:</h6>
+                            <p style="white-space: pre-wrap;">@report.Content</p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(report.ResolutionNote))
+                        {
+                            <div class="alert alert-success mt-3">
+                                <h6><span class="oi oi-check"></span> Your Resolution Note:</h6>
+                                <p class="mb-0">@report.ResolutionNote</p>
+                            </div>
+                        }
+
+                        @if (report.Rating.HasValue)
+                        {
+                            <div class="mt-3 p-3 bg-light rounded">
+                                <strong>Customer Rating: </strong>
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span style="color: @(i <= report.Rating ? "#ffc107" : "#ccc"); font-size: 1.5rem;">★</span>
+                                }
+                                <span class="ms-2">(@report.Rating.Value / 5 stars)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><span class="oi oi-comment-square"></span> Communication Thread</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (report.ReportComments.Any())
+                        {
+                            <div class="comments-list">
+                                @foreach (var comment in report.ReportComments.OrderBy(c => c.CreatedDate))
+                                {
+                                    <div class="mb-3 p-3 border rounded @(comment.UserType == "Staff" ? "bg-light" : "") @(comment.IsInternal ? "border-warning" : "")">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <div>
+                                                <strong>@(comment.UserType == "Customer" ? "Customer" : "Staff")</strong>
+                                                @if (comment.IsInternal)
+                                                {
+                                                    <span class="badge bg-warning ms-2">Internal Note</span>
+                                                }
+                                            </div>
+                                            <small class="text-muted">
+                                                @comment.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                            </small>
+                                        </div>
+                                        <p class="mb-0" style="white-space: pre-wrap;">@comment.Comment</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-3">No comments yet</p>
+                        }
+
+                        @if (report.Status != "Resolved" && report.Status != "Rejected")
+                        {
+                            <hr/>
+                            <div class="add-comment-section">
+                                <h6>Add Response:</h6>
+                                <div class="form-group mb-2">
+                                    <textarea class="form-control" rows="3" 
+                                             @bind="newComment" 
+                                             placeholder="Type your response to customer..."
+                                             disabled="@isSubmittingComment"></textarea>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" @bind="isInternalNote" id="internalCheck">
+                                    <label class="form-check-label" for="internalCheck">
+                                        Internal Note (Not visible to customer)
+                                    </label>
+                                </div>
+                                <button class="btn btn-primary" @onclick="HandleAddComment" disabled="@(string.IsNullOrWhiteSpace(newComment) || isSubmittingComment)">
+                                    @if (isSubmittingComment)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    <span class="oi oi-comment-square"></span> Post Comment
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Actions -->
+            <div class="col-md-4">
+                @if (report.Status != "Resolved" && report.Status != "Rejected")
+                {
+                    <!-- Staff Actions Panel -->
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6><span class="oi oi-wrench"></span> Update Status</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <button class="btn btn-primary w-100 mb-2" @onclick='() => UpdateStatus("InProgress")'>
+                                    <span class="oi oi-media-play"></span> Mark as In Progress
+                                </button>
+                                <button class="btn btn-success w-100 mb-2" @onclick="ShowResolveModal">
+                                    <span class="oi oi-check"></span> Mark as Resolved
+                                </button>
+                                <button class="btn btn-danger w-100" @onclick="ShowRejectModal">
+                                    <span class="oi oi-x"></span> Mark as Rejected
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card mb-3 border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6><span class="oi oi-check"></span> Report Closed</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">This report has been @report.Status.ToLower().</p>
+                            @if (report.ResolvedDate.HasValue)
+                            {
+                                <small class="text-muted">
+                                    Resolved on: @report.ResolvedDate.Value.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Report Info Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6><span class="oi oi-info"></span> Report Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <small class="text-muted">Report ID:</small>
+                            <br/>
+                            <code style="font-size: 0.75rem; word-break: break-all;">@report.ReportId</code>
+                        </div>
+                        <hr/>
+                        <div class="mb-2">
+                            <small class="text-muted">Current Status:</small>
+                            <br/>
+                            <span class="badge badge-@GetStatusColor(report.Status)">@report.Status</span>
+                        </div>
+                        <hr/>
+                        <div class="mb-2">
+                            <small class="text-muted">Priority:</small>
+                            <br/>
+                            <span class="badge badge-@GetPriorityColor(report.Priority)">@report.Priority</span>
+                        </div>
+                        <hr/>
+                        <div class="mb-2">
+                            <small class="text-muted">Assigned to:</small>
+                            <br/>
+                            <strong>You (@report.AssignedStaff?.FullName)</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Resolve Modal -->
+@if (showResolveModal)
+{
+    <div class="modal show d-block" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Mark Report as Resolved</h5>
+                    <button type="button" class="close" @onclick="CloseModals">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Resolution Note *</label>
+                        <textarea class="form-control" rows="5" @bind="resolutionNote"
+                                 placeholder="Explain how the issue was resolved..."></textarea>
+                        <small class="text-muted">This will be visible to the customer</small>
+                    </div>
+                    @if (!string.IsNullOrEmpty(statusError))
+                    {
+                        <div class="alert alert-danger">@statusError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="btn btn-success" @onclick='() => ConfirmStatusUpdate("Resolved")'
+                            disabled="@(string.IsNullOrWhiteSpace(resolutionNote) || isUpdatingStatus)">
+                        @if (isUpdatingStatus)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        Confirm Resolved
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Reject Modal -->
+@if (showRejectModal)
+{
+    <div class="modal show d-block" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Mark Report as Rejected</h5>
+                    <button type="button" class="close" @onclick="CloseModals">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason *</label>
+                        <textarea class="form-control" rows="5" @bind="resolutionNote"
+                                 placeholder="Explain why this report is rejected..."></textarea>
+                        <small class="text-muted">This will be visible to the customer</small>
+                    </div>
+                    @if (!string.IsNullOrEmpty(statusError))
+                    {
+                        <div class="alert alert-danger">@statusError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="btn btn-danger" @onclick='() => ConfirmStatusUpdate("Rejected")' 
+                            disabled="@(string.IsNullOrWhiteSpace(resolutionNote) || isUpdatingStatus)">
+                        @if (isUpdatingStatus)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        Confirm Rejected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid ReportId { get; set; }
+
+    private CustomerReport? report;
+    private bool isLoading = true;
+    private bool isSubmittingComment = false;
+    private bool isUpdatingStatus = false;
+    private string newComment = string.Empty;
+    private bool isInternalNote = false;
+
+    private bool showResolveModal = false;
+    private bool showRejectModal = false;
+    private string resolutionNote = string.Empty;
+    private string statusError = string.Empty;
+
+    private Guid currentStaffId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ReportService.OnNewCommentAdded += HandleNewCommentAdded;
+
+        currentStaffId = await UserService.GetCurrentUserId();
+        await LoadReportDetail();
+    }
+
+    private async Task LoadReportDetail()
+    {
+        isLoading = true;
+        try
+        {
+            report = await ReportService.GetReportDetailAsync(ReportId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleAddComment()
+    {
+        if (string.IsNullOrWhiteSpace(newComment) || report == null)
+            return;
+
+        isSubmittingComment = true;
+        try
+        {
+            var comment = new ReportComment
+            {
+                ReportId = report.ReportId,
+                UserId = currentStaffId,
+                UserType = "Staff",
+                Comment = newComment,
+                IsInternal = isInternalNote
+            };
+
+            ReportComment addedComment;
+            if (isInternalNote)
+            {
+                addedComment = await ReportService.AddInternalNoteAsync(comment);
+            }
+            else
+            {
+                addedComment = await ReportService.AddCommentAsync(comment);
+            }
+
+            if (!report.ReportComments.Any(c => c.CommentId == addedComment.CommentId))
+            {
+                report.ReportComments.Add(addedComment);
+            }
+
+            newComment = string.Empty;
+            isInternalNote = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSubmittingComment = false;
+        }
+    }
+
+    private async Task UpdateStatus(string status)
+    {
+        if (report == null)
+            return;
+
+        try
+        {
+            var success = await ReportService.UpdateReportStatusByStaffAsync(report.ReportId, status);
+            if (success)
+            {
+                report.Status = status;
+                report.UpdatedDate = DateTime.Now;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private void ShowResolveModal()
+    {
+        resolutionNote = string.Empty;
+        statusError = string.Empty;
+        showResolveModal = true;
+    }
+
+    private void ShowRejectModal()
+    {
+        resolutionNote = string.Empty;
+        statusError = string.Empty;
+        showRejectModal = true;
+    }
+
+    private void CloseModals()
+    {
+        showResolveModal = false;
+        showRejectModal = false;
+        resolutionNote = string.Empty;
+        statusError = string.Empty;
+    }
+
+    private async Task ConfirmStatusUpdate(string status)
+    {
+        if (string.IsNullOrWhiteSpace(resolutionNote) || report == null)
+            return;
+
+        isUpdatingStatus = true;
+        statusError = string.Empty;
+
+        try
+        {
+            var success = await ReportService.UpdateReportStatusByStaffAsync(
+                report.ReportId, 
+                status, 
+                resolutionNote
+            );
+
+            if (success)
+            {
+                report.Status = status;
+                report.ResolutionNote = resolutionNote;
+                report.UpdatedDate = DateTime.Now;
+                report.ResolvedDate = DateTime.Now;
+                CloseModals();
+            }
+            else
+            {
+                statusError = "Failed to update status";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isUpdatingStatus = false;
+        }
+    }
+
+    private void HandleNewCommentAdded(ReportComment comment)
+    {
+        if (report != null && comment.ReportId == ReportId)
+        {
+            if (!report.ReportComments.Any(c => c.CommentId == comment.CommentId))
+            {
+                report.ReportComments.Add(comment);
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/staff/reports");
+    }
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Pending" => "warning",
+        "InProgress" => "primary",
+        "Resolved" => "success",
+        "Rejected" => "danger",
+        _ => "secondary"
+    };
+
+    private string GetPriorityColor(string priority) => priority switch
+    {
+        "Urgent" => "danger",
+        "High" => "warning",
+        "Normal" => "info",
+        "Low" => "secondary",
+        _ => "secondary"
+    };
+
+    public void Dispose()
+    {
+        ReportService.OnNewCommentAdded -= HandleNewCommentAdded;
+    }
+}
