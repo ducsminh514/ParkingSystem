@@ -37,8 +37,16 @@ public partial class ParkingManagementContext : DbContext
     public virtual DbSet<ParkingPrice> ParkingPrices { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        // Connection string is provided via DI in Program.cs
+        // Only configure if options are not already set
+        if (!optionsBuilder.IsConfigured)
+        {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=WINDOWS-11\\MSSQLSERVER01; database=ParkingManagement; uid=sa; pwd=123; TrustServerCertificate=True;");
+            // Fallback connection string (not used when DI is configured in Program.cs)
+            optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=ParkingManagement;Trusted_Connection=True;TrustServerCertificate=True;");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
