@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
+using ParkingSystem.Shared.DTOs;
 
 namespace ParkingSystem.Server.Hubs
 {
@@ -216,6 +217,269 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 throw new HubException($"Error getting admin statistics: {ex.Message}");
+            }
+        }
+
+        // ============ ADMIN PRICING MANAGEMENT ============
+
+        /// <summary>
+        /// Lấy tất cả giá (bao gồm inactive) - Admin only
+        /// </summary>
+        public async Task<List<ParkingPriceDetailDto>> GetAllPricesAdmin()
+        {
+            try
+            {
+                _logger.LogInformation("Admin getting all prices");
+
+                var prices = await _context.ParkingPrices
+                    .OrderByDescending(p => p.IsActive)
+                    .ThenBy(p => p.VehicleType)
+                    .Select(p => new ParkingPriceDetailDto
+                    {
+                        PriceId = p.PriceId,
+                        VehicleType = p.VehicleType,
+                        PricePerHour = p.PricePerHour,
+                        IsActive = p.IsActive,
+                        CreatedDate = p.CreatedDate,
+                        UpdatedDate = p.UpdatedDate
+                    })
+                    .ToListAsync();
+
+                return prices;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all prices for admin");
+                throw new HubException($"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Tạo hoặc cập nhật giá - Admin only
+        /// </summary>
+        public async Task<UpsertPriceResponse> UpsertPrice(UpsertPriceRequest request)
+        {
+            try
+            {
+                _logger.LogInformation($"Admin upserting price: {request.VehicleType}");
+
+                // Validation
+                if (string.IsNullOrWhiteSpace(request.VehicleType))
+                {
+                    return new UpsertPriceResponse
+                    {
+                        Success = false,
+                        Message = "Vui lòng nhập loại xe"
+                    };
+                }
+
+                if (request.PricePerHour <= 0)
+                {
+                    return new UpsertPriceResponse
+                    {
+                        Success = false,
+                        Message = "Giá phải lớn hơn 0"
+                    };
+                }
+
+                ParkingPrice price;
+
+                if (request.PriceId.HasValue)
+                {
+                    // UPDATE
+                    price = await _context.ParkingPrices.FindAsync(request.PriceId.Value);
+
+                    if (price == null)
+                    {
+                        return new UpsertPriceResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy giá cần cập nhật"
+                        };
+                    }
+
+                    // Kiểm tra trùng VehicleType (nếu thay đổi)
+                    if (price.VehicleType != request.VehicleType)
+                    {
+                        var exists = await _context.ParkingPrices
+                            .AnyAsync(p => p.VehicleType == request.VehicleType && p.PriceId != price.PriceId);
+
+                        if (exists)
+                        {
+                            return new UpsertPriceResponse
+                            {
+                                Success = false,
+                                Message = $"Loại xe '{request.VehicleType}' đã tồn tại"
+                            };
+                        }
+                    }
+
+                    price.VehicleType = request.VehicleType.Trim();
+                    price.PricePerHour = request.PricePerHour;
+                    price.IsActive = request.IsActive;
+                    price.UpdatedDate = DateTime.Now;
+
+                    _logger.LogInformation($"Updated price: {price.VehicleType} - {price.PricePerHour}");
+                }
+                else
+                {
+                    // CREATE
+                    // Kiểm tra trùng VehicleType
+                    var exists = await _context.ParkingPrices
+                        .AnyAsync(p => p.VehicleType == request.VehicleType);
+
+                    if (exists)
+                    {
+                        return new UpsertPriceResponse
+                        {
+                            Success = false,
+                            Message = $"Loại xe '{request.VehicleType}' đã tồn tại"
+                        };
+                    }
+
+                    price = new ParkingPrice
+                    {
+                        PriceId = Guid.NewGuid(),
+                        VehicleType = request.VehicleType.Trim(),
+                        PricePerHour = request.PricePerHour,
+                        IsActive = request.IsActive,
+                        CreatedDate = DateTime.Now
+                    };
+
+                    _context.ParkingPrices.Add(price);
+                    _logger.LogInformation($"Created new price: {price.VehicleType} - {price.PricePerHour}");
+                }
+
+                await _context.SaveChangesAsync();
+
+                var priceDto = new ParkingPriceDto
+                {
+                    PriceId = price.PriceId,
+                    VehicleType = price.VehicleType,
+                    PricePerHour = price.PricePerHour,
+                    IsActive = price.IsActive
+                };
+
+                // Broadcast to all clients
+                await Clients.All.SendAsync("OnPriceUpdated", priceDto);
+
+                return new UpsertPriceResponse
+                {
+                    Success = true,
+                    Message = request.PriceId.HasValue ? "Cập nhật giá thành công" : "Thêm giá mới thành công",
+                    Price = priceDto
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error upserting price");
+                return new UpsertPriceResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi server: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Xóa giá (soft delete) - Admin only
+        /// </summary>
+        public async Task<DeletePriceResponse> DeletePrice(Guid priceId)
+        {
+            try
+            {
+                _logger.LogInformation($"Admin deleting price: {priceId}");
+
+                var price = await _context.ParkingPrices.FindAsync(priceId);
+
+                if (price == null)
+                {
+                    return new DeletePriceResponse
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy giá cần xóa"
+                    };
+                }
+
+                // Soft delete: Set IsActive = false
+                price.IsActive = false;
+                price.UpdatedDate = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Deleted price: {price.VehicleType}");
+
+                // Broadcast to all clients
+                await Clients.All.SendAsync("OnPriceDeleted", priceId);
+
+                return new DeletePriceResponse
+                {
+                    Success = true,
+                    Message = "Xóa giá thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting price");
+                return new DeletePriceResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi server: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Toggle trạng thái active/inactive - Admin only
+        /// </summary>
+        public async Task<UpsertPriceResponse> TogglePriceStatus(Guid priceId)
+        {
+            try
+            {
+                _logger.LogInformation($"Admin toggling price status: {priceId}");
+
+                var price = await _context.ParkingPrices.FindAsync(priceId);
+
+                if (price == null)
+                {
+                    return new UpsertPriceResponse
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy giá"
+                    };
+                }
+
+                price.IsActive = !price.IsActive;
+                price.UpdatedDate = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                var priceDto = new ParkingPriceDto
+                {
+                    PriceId = price.PriceId,
+                    VehicleType = price.VehicleType,
+                    PricePerHour = price.PricePerHour,
+                    IsActive = price.IsActive
+                };
+
+                // Broadcast to all clients
+                await Clients.All.SendAsync("OnPriceUpdated", priceDto);
+
+                return new UpsertPriceResponse
+                {
+                    Success = true,
+                    Message = price.IsActive ? "Đã kích hoạt giá" : "Đã tắt giá",
+                    Price = priceDto
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling price status");
+                return new UpsertPriceResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi server: {ex.Message}"
+                };
             }
         }
     }

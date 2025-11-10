@@ -29,6 +29,7 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
 builder.Services.AddScoped<SimpleAuthStateProvider>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<AdminService>();
 // ============================
 // SignalR Connection - SINGLETON
 // ============================
