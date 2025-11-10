@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
-using ParkingSystem.Shared.Models;
-using ParkingSystem.Shared.DTOs;
 using Microsoft.Extensions.Logging;
+using ParkingSystem.Shared.DTOs;
+using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Client.Services
 {
@@ -292,6 +292,65 @@ namespace ParkingSystem.Client.Services
                 };
             }
         }
+        /// <summary>
+        /// Lấy danh sách bảng giá
+        /// </summary>
+        public async Task<List<ParkingPriceDto>> GetParkingPrices()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<List<ParkingPriceDto>>("GetParkingPrices");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting parking prices");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Tính phí trước khi check-out
+        /// </summary>
+        public async Task<CalculateFeeResponse> CalculateParkingFee(Guid registrationId)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CalculateFeeResponse>("CalculateParkingFee", registrationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating fee");
+                return new CalculateFeeResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi tính phí: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Check-out với payment
+        /// </summary>
+        public async Task<CheckOutWithPaymentResponse> CheckOutWithPayment(CheckOutWithPaymentRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CheckOutWithPaymentResponse>("CheckOutWithPayment", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in check-out with payment");
+                return new CheckOutWithPaymentResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+
 
         // ============ PARKING REGISTRATION OPERATIONS ============
 

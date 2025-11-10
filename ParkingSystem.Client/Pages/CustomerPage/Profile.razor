@@ -313,8 +313,7 @@
                 return;
             }
 
-            // Gọi API đổi mật khẩu (cần implement)
-            // await ParkingService.ChangePassword(currentCustomerId, changePasswordModel);
+            await CustomerService.ChangePassword(currentCustomerId, changePasswordModel);
 
             successMessage = "Đổi mật khẩu thành công!";
             changePasswordModel = new();
@@ -329,10 +328,4 @@
         }
     }
 
-    public class ChangePasswordModel
-    {
-        public string CurrentPassword { get; set; } = string.Empty;
-        public string NewPassword { get; set; } = string.Empty;
-        public string ConfirmPassword { get; set; } = string.Empty;
-    }
 }

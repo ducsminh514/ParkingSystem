@@ -2,6 +2,7 @@
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Shared.DTOs
 @using ParkingSystem.Client.Services
+@using ParkingSystem.Shared.DTOs
 @inject SlotService SlotService 
 @inject IJSRuntime JSRuntime
 @inject UserService UserService
@@ -516,61 +517,217 @@
                     }
                     else
                     {
-                        <!-- SLOT ĐÃ ĐƯỢC SỬ DỤNG -->
-                        <div class="alert alert-danger">
-                            <i class="bi bi-x-circle-fill"></i> Chỗ đỗ này đang được sử dụng
-                        </div>
+                        @if (showCheckoutConfirmation)
+                        {
+                            <!-- BƯỚC 2: HIỂN THỊ THÔNG TIN PHÍ VÀ XÁC NHẬN -->
+                            @if (feeCalculation == null)
+                            {
+                                <!-- ĐANG TẢI THÔNG TIN PHÍ -->
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Đang tải...</span>
+                                    </div>
+                                    <p class="mt-2">Đang tính toán phí...</p>
+                                </div>
+                            }
+                            else if (!feeCalculation.Success)
+                            {
+                                <!-- LỖI KHI TÍNH PHÍ -->
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle-fill"></i> @feeCalculation.Message
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- HIỂN THỊ THÔNG TIN PHÍ -->
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-circle-fill"></i> Vui lòng kiểm tra thông tin trước khi xác nhận check-out
+                                </div>
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <label class="text-muted small">Biển Số Xe</label>
-                                    <div class="fw-bold fs-5">
-                                        <i class="bi bi-credit-card-2-front text-primary"></i> @selectedSlot.VehiclePlateNumber
+                                <!-- Timeline Check-in/Check-out -->
+                                <div class="timeline-card mb-4">
+                                    <div class="timeline-item">
+                                        <div class="timeline-icon bg-success">
+                                            <i class="bi bi-box-arrow-in-right"></i>
+                                        </div>
+                                        <div class="timeline-content flex-grow-1">
+                                            <label>Thời gian vào</label>
+                                            <div class="fw-bold fs-5">@feeCalculation.CheckInTime.ToString("dd/MM/yyyy HH:mm:ss")</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="timeline-connector"></div>
+
+                                    <div class="timeline-item">
+                                        <div class="timeline-icon bg-danger">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                        </div>
+                                        <div class="timeline-content flex-grow-1">
+                                            <label>Thời gian ra (dự kiến)</label>
+                                            <div class="fw-bold fs-5">@feeCalculation.CheckOutTime.ToString("dd/MM/yyyy HH:mm:ss")</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-center mt-3">
+                                        <span class="badge bg-primary" style="font-size: 1.1rem; padding: 0.75rem 1.25rem;">
+                                            <i class="bi bi-clock-history"></i>
+                                            Thời gian đỗ: @feeCalculation.DurationDisplay
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Thông tin xe & khách hàng -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Biển Số Xe</label>
+                                            <div class="fw-bold fs-5">
+                                                <i class="bi bi-credit-card-2-front text-primary"></i>
+                                                @feeCalculation.VehiclePlateNumber
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Loại Xe</label>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-car-front text-primary"></i>
+                                                @feeCalculation.VehicleType
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Khách Hàng</label>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-person text-success"></i>
+                                                @feeCalculation.CustomerName
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Số Điện Thoại</label>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-telephone text-success"></i>
+                                                @feeCalculation.CustomerPhone
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chi tiết tính phí -->
+                                <div class="fee-calculation-card">
+                                    <h5 class="mb-3">
+                                        <i class="bi bi-calculator"></i> Chi Tiết Tính Phí
+                                    </h5>
+
+                                    <div class="fee-details mb-3">
+                                        <div class="fee-row">
+                                            <span class="fee-label">
+                                                <i class="bi bi-tag"></i> Đơn giá (@feeCalculation.VehicleType):
+                                            </span>
+                                            <span class="fee-value">
+                                                @string.Format("{0:N0}", feeCalculation.PricePerHour) đ/giờ
+                                            </span>
+                                        </div>
+
+                                        <div class="fee-row">
+                                            <span class="fee-label">
+                                                <i class="bi bi-clock"></i> Số giờ đỗ:
+                                            </span>
+                                            <span class="fee-value">
+                                                @feeCalculation.TotalHours.ToString("0.00") giờ
+                                            </span>
+                                        </div>
+
+                                        <hr class="my-3" />
+
+                                        <div class="fee-row total">
+                                            <span class="fee-label fw-bold fs-5">
+                                                <i class="bi bi-cash-coin"></i> TỔNG TIỀN:
+                                            </span>
+                                            <span class="fee-value fw-bold text-danger" style="font-size: 1.75rem;">
+                                                @string.Format("{0:N0}", feeCalculation.TotalAmount) đ
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Công thức tính -->
+                                    <div class="alert alert-light mb-0">
+                                        <small class="text-muted">
+                                            <i class="bi bi-info-circle"></i>
+                                            Công thức: @string.Format("{0:N0}", feeCalculation.PricePerHour) đ/giờ × @feeCalculation.TotalHours.ToString("0.00") giờ = @string.Format("{0:N0}", feeCalculation.TotalAmount) đ
+                                        </small>
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(registrationError))
+                                {
+                                    <div class="alert alert-danger mt-3">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> @registrationError
+                                    </div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <!-- BƯỚC 1: HIỂN THỊ THÔNG TIN SLOT NHƯ CŨ -->
+                            <div class="alert alert-danger">
+                                <i class="bi bi-x-circle-fill"></i> Chỗ đỗ này đang được sử dụng
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Biển Số Xe</label>
+                                        <div class="fw-bold fs-5">
+                                            <i class="bi bi-credit-card-2-front text-primary"></i> @selectedSlot.VehiclePlateNumber
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Loại Xe</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-car-front text-primary"></i> @(selectedSlot.VehicleType ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Khách Hàng</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-person text-success"></i> @(selectedSlot.CustomerName ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Số Điện Thoại</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-telephone text-success"></i> @(selectedSlot.CustomerPhone ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Thời Gian Vào</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-clock-history text-info"></i> @(selectedSlot.CheckInTime?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Thời Gian Đỗ</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-hourglass-split text-warning"></i> @(selectedSlot.ParkingDuration ?? "N/A")
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <label class="text-muted small">Loại Xe</label>
-                                    <div class="fw-bold">
-                                        <i class="bi bi-car-front text-primary"></i> @(selectedSlot.VehicleType ?? "N/A")
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <label class="text-muted small">Khách Hàng</label>
-                                    <div class="fw-bold">
-                                        <i class="bi bi-person text-success"></i> @(selectedSlot.CustomerName ?? "N/A")
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <label class="text-muted small">Số Điện Thoại</label>
-                                    <div class="fw-bold">
-                                        <i class="bi bi-telephone text-success"></i> @(selectedSlot.CustomerPhone ?? "N/A")
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <label class="text-muted small">Thời Gian Vào</label>
-                                    <div class="fw-bold">
-                                        <i class="bi bi-clock-history text-info"></i> @(selectedSlot.CheckInTime?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <label class="text-muted small">Thời Gian Đỗ</label>
-                                    <div class="fw-bold">
-                                        <i class="bi bi-hourglass-split text-warning"></i> @(selectedSlot.ParkingDuration ?? "N/A")
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        }
                     }
                 </div>
                 <div class="modal-footer">
@@ -613,21 +770,46 @@
                     }
                     else
                     {
-                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">
-                            <i class="bi bi-x-lg"></i> Đóng
-                        </button>
-                        <button type="button" class="btn btn-danger" @onclick="HandleCheckOut" disabled="@isSubmitting">
-                            @if (isSubmitting)
+                        @if (showCheckoutConfirmation)
+                        {
+                            <!-- FOOTER CHO MÀN HÌNH XÁC NHẬN PHÍ -->
+                            <button type="button" class="btn btn-secondary" @onclick="BackToSlotInfo" disabled="@isSubmitting">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </button>
+
+                            @if (feeCalculation != null && feeCalculation.Success)
                             {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                                <span>Đang xử lý...</span>
+                                <button type="button"
+                                        class="btn btn-danger btn-lg"
+                                        @onclick="HandleCheckOut"
+                                        disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Đang xử lý...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Xác Nhận Check-out (@string.Format("{0:N0}", feeCalculation.TotalAmount) đ)</span>
+                                    }
+                                </button>
                             }
-                            else
-                            {
+                        }
+                        else
+                        {
+                            <!-- FOOTER CHO MÀN HÌNH THÔNG TIN SLOT -->
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                                <i class="bi bi-x-lg"></i> Đóng
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-danger"
+                                    @onclick="ShowCheckoutScreen">
                                 <i class="bi bi-box-arrow-right"></i>
                                 <span>Check Out</span>
-                            }
-                        </button>
+                            </button>
+                        }
                     }
                 </div>
             </div>
@@ -958,6 +1140,88 @@
     .btn:active {
         transform: scale(0.97);
     }
+
+    /* Payment section styles */
+    .payment-section {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .timeline-card {
+        background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+        border: 2px solid #0EA5E9;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .timeline-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .timeline-content label {
+        font-size: 0.75rem;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .timeline-connector {
+        width: 2px;
+        height: 30px;
+        background: #0EA5E9;
+        margin-left: 24px;
+    }
+
+    .fee-calculation-card {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border: 2px solid #F59E0B;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .total-amount {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .payment-methods {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .form-check-inline {
+        background: white;
+        border: 2px solid #E5E7EB;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-check-inline:has(input:checked) {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        border-color: #059669;
+        color: white;
+    }
+
+    .form-check-inline:has(input:checked) label {
+        color: white;
+    }
 </style>
 
 @code {
@@ -982,7 +1246,7 @@
     
     // Customer check result
     private CustomerCheckResult? customerCheckResult = null;
-    
+	private bool showCheckoutConfirmation = false;
     // New customer data
     private string newCustomerName = string.Empty;
     private string newCustomerEmail = string.Empty;
@@ -1119,6 +1383,45 @@
             newVehicleType = string.Empty;
             registrationError = string.Empty;
         }
+        else
+        {
+            // Slot đang sử dụng - Tính phí ngay
+            _ = LoadFeeCalculation();
+        }
+    }
+
+    // ============ CHECK-OUT WITH PAYMENT ============
+
+    private CalculateFeeResponse? feeCalculation = null;
+    private bool isCalculatingFee = false;
+    private string selectedPaymentMethod = "Cash";
+
+    private async Task LoadFeeCalculation()
+    {
+        if (selectedSlot?.CurrentRegistrationId == null) return;
+
+        try
+        {
+            isCalculatingFee = true;
+            registrationError = string.Empty;
+
+            feeCalculation = await SlotService.CalculateParkingFee(selectedSlot.CurrentRegistrationId.Value);
+
+            if (!feeCalculation.Success)
+            {
+                registrationError = feeCalculation.Message;
+                feeCalculation = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            registrationError = $"Lỗi tính phí: {ex.Message}";
+            feeCalculation = null;
+        }
+        finally
+        {
+            isCalculatingFee = false;
+        }
     }
 
     private void CloseModal()
@@ -1240,6 +1543,17 @@
         }
     }
 
+    private void ShowCheckoutScreen()
+    {
+        showCheckoutConfirmation = true;
+        registrationError = string.Empty;
+	}
+
+    private void BackToSlotInfo()
+    {
+        showCheckoutConfirmation = false;
+        registrationError = string.Empty;
+	}
     private async Task SubmitRegistration()
     {
         if (selectedSlot == null) return;

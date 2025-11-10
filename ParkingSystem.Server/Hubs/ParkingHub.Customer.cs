@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
-
 namespace ParkingSystem.Server.Hubs
 {
     public partial class ParkingHub 
@@ -417,6 +416,58 @@ namespace ParkingSystem.Server.Hubs
             {
                 _logger.LogError(ex, "Error getting vehicle details");
                 throw new HubException("Không thể lấy thông tin xe");
+            }
+        }
+
+        // Đổi mật khẩu
+        public async Task ChangePassword(Guid customerId, ChangePasswordModel model)
+        {
+            try
+            {
+                // Validate input
+                if (string.IsNullOrEmpty(model.CurrentPassword) || 
+                    string.IsNullOrEmpty(model.NewPassword) || 
+                    string.IsNullOrEmpty(model.ConfirmPassword))
+                {
+                    throw new HubException("Vui lòng điền đầy đủ thông tin");
+                }
+
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    throw new HubException("Mật khẩu xác nhận không khớp");
+                }
+
+                if (model.NewPassword.Length < 6)
+                {
+                    throw new HubException("Mật khẩu mới phải có ít nhất 6 ký tự");
+                }
+
+                // Get customer
+                var customer = await _context.Customers.FindAsync(customerId);
+                if (customer == null)
+                {
+                    throw new HubException("Không tìm thấy thông tin khách hàng");
+                }
+
+                // Verify current password
+                if (!BCrypt.Net.BCrypt.Verify(model.CurrentPassword, customer.PasswordHash))
+                {
+                    throw new HubException("Mật khẩu hiện tại không đúng");
+                }
+
+                // Update password
+                customer.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+                _context.Customers.Update(customer);
+                await _context.SaveChangesAsync();
+            }
+            catch (HubException)
+            {
+                throw; // Re-throw HubException as is
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password for customer {CustomerId}", customerId);
+                throw new HubException("Đã xảy ra lỗi khi đổi mật khẩu. Vui lòng thử lại sau.");
             }
         }
     }
