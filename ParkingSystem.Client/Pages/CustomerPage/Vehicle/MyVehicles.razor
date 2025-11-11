@@ -118,10 +118,13 @@
                 </div>
                 <div class="modal-body">
                     <EditForm Model="currentVehicle" OnValidSubmit="SaveVehicle">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
                         <div class="mb-3">
                             <label class="form-label">Biển số xe <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" @bind="currentVehicle.PlateNumber" 
-                                   placeholder="Ví dụ: 30A-12345" required />
+                            <input type="text" class="form-control" @bind="currentVehicle.PlateNumber"
+                                   placeholder="Ví dụ: 30A-12345" required/>
+                            <ValidationMessage For="@(() => currentVehicle.PlateNumber)"/>
                         </div>
 
                         <div class="mb-3">
@@ -242,13 +245,21 @@
         currentVehicle = new();
         errorMessage = string.Empty;
     }
-
+    private string NormalizePlate(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        var s = input!.Trim().ToUpperInvariant();
+        // keep existing dash if present, remove spaces and dots
+        s = s.Replace(" ", "").Replace(".", "");
+        return s;
+    }
     private async Task SaveVehicle()
     {
         try
         {
             isSaving = true;
             errorMessage = string.Empty;
+            currentVehicle.PlateNumber = NormalizePlate(currentVehicle.PlateNumber);
 
             if (isEditMode)
             {

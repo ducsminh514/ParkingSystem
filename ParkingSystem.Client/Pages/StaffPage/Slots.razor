@@ -2,6 +2,7 @@
 @using ParkingSystem.Shared.Models
 @using ParkingSystem.Shared.DTOs
 @using ParkingSystem.Client.Services
+@using Microsoft.AspNetCore.Components.Forms
 @using ParkingSystem.Shared.DTOs
 @inject SlotService SlotService 
 @inject IJSRuntime JSRuntime
@@ -351,35 +352,40 @@
                                 <!-- Option thêm xe mới -->
                                 @if (customerCheckResult.Vehicles.Count == 0 || showAddVehicleForm)
                                 {
-                                    <div class="card border-primary">
-                                        <div class="card-body">
-                                            <h6 class="card-title">
-                                                <i class="bi bi-plus-circle"></i> Thêm xe mới
-                                                @if (customerCheckResult.Vehicles.Count > 0)
-                                                {
-                                                    <button class="btn btn-sm btn-outline-secondary float-end" @onclick="() => showAddVehicleForm = false">
-                                                        <i class="bi bi-x"></i> Hủy
-                                                    </button>
-                                                }
-                                            </h6>
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Biển Số Xe <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" @bind="newVehiclePlateNumber" placeholder="VD: 29A-12345" />
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Loại Xe <span class="text-danger">*</span></label>
-                                                    <select class="form-select" @bind="newVehicleType">
-                                                        <option value="">-- Chọn loại xe --</option>
-                                                        <option value="Xe máy">Xe máy</option>
-                                                        <option value="Ô tô">Ô tô</option>
-                                                        <option value="Xe đạp">Xe đạp</option>
-                                                        <option value="Xe tải">Xe tải</option>
-                                                    </select>
+                                    <EditForm EditContext="@vehicleEditContext">
+                                        <div class="card border-primary">
+                                            <div class="card-body">
+                                                <h6 class="card-title">
+                                                    <i class="bi bi-plus-circle"></i> Thêm xe mới
+                                                    @if (customerCheckResult.Vehicles.Count > 0)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary float-end" @onclick="() => showAddVehicleForm = false">
+                                                            <i class="bi bi-x"></i> Hủy
+                                                        </button>
+                                                    }
+                                                </h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <DataAnnotationsValidator />
+                                                        <ValidationSummary />
+                                                        <label class="form-label">Biển Số Xe <span class="text-danger">*</span></label>
+                                                        <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="VD: 29A-12345" />
+                                                        <ValidationMessage For="@(() => vehicleModel.PlateNumber)" />
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Loại Xe <span class="text-danger">*</span></label>
+                                                        <select class="form-select" @bind="newVehicleType">
+                                                            <option value="">-- Chọn loại xe --</option>
+                                                            <option value="Xe máy">Xe máy</option>
+                                                            <option value="Ô tô">Ô tô</option>
+                                                            <option value="Xe đạp">Xe đạp</option>
+                                                            <option value="Xe tải">Xe tải</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </EditForm>
                                 }
                                 else
                                 {
@@ -415,27 +421,32 @@
                                     </div>
                                 </div>
 
-                                <div class="card border-primary">
-                                    <div class="card-body">
-                                        <h6 class="card-title"><i class="bi bi-car-front"></i> Thông tin xe</h6>
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Biển Số Xe <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" @bind="newVehiclePlateNumber" placeholder="VD: 29A-12345" />
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Loại Xe <span class="text-danger">*</span></label>
-                                                <select class="form-select" @bind="newVehicleType">
-                                                    <option value="">-- Chọn loại xe --</option>
-                                                    <option value="Xe máy">Xe máy</option>
-                                                    <option value="Ô tô">Ô tô</option>
-                                                    <option value="Xe đạp">Xe đạp</option>
-                                                    <option value="Xe tải">Xe tải</option>
-                                                </select>
+                                <EditForm EditContext="@vehicleEditContext">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <h6 class="card-title"><i class="bi bi-car-front"></i> Thông tin xe</h6>
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <DataAnnotationsValidator />
+                                                    <ValidationSummary />
+                                                    <label class="form-label">Biển Số Xe <span class="text-danger">*</span></label>
+                                                    <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="VD: 29A-12345" />
+                                                    <ValidationMessage For="@(() => vehicleModel.PlateNumber)" />
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Loại Xe <span class="text-danger">*</span></label>
+                                                    <select class="form-select" @bind="newVehicleType">
+                                                        <option value="">-- Chọn loại xe --</option>
+                                                        <option value="Xe máy">Xe máy</option>
+                                                        <option value="Ô tô">Ô tô</option>
+                                                        <option value="Xe đạp">Xe đạp</option>
+                                                        <option value="Xe tải">Xe tải</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </EditForm>
                             }
 
                             @if (!string.IsNullOrEmpty(registrationError))
@@ -1380,8 +1391,10 @@
             selectedVehicleId = null;
             showAddVehicleForm = false;
             newVehiclePlateNumber = string.Empty;
-            newVehicleType = string.Empty;
-            registrationError = string.Empty;
+            // Initialize/clear vehicle input model and edit context
+            vehicleModel = new VehicleInputModel();
+            vehicleEditContext = new EditContext(vehicleModel);
+             registrationError = string.Empty;
         }
         else
         {
@@ -1497,7 +1510,7 @@
             if (customerCheckResult?.Exists == true)
             {
                 // Customer tồn tại - phải chọn xe hoặc nhập xe mới
-                if (selectedVehicleId == null && string.IsNullOrWhiteSpace(newVehiclePlateNumber))
+                if (selectedVehicleId == null && string.IsNullOrWhiteSpace(vehicleModel?.PlateNumber))
                 {
                     registrationError = "Vui lòng chọn xe hoặc thêm xe mới";
                     return;
@@ -1506,11 +1519,14 @@
                 if (selectedVehicleId == null)
                 {
                     // Đang thêm xe mới
-                    if (string.IsNullOrWhiteSpace(newVehiclePlateNumber))
+                    // validate vehicle model
+                    if (vehicleEditContext == null || !vehicleEditContext.Validate())
                     {
-                        registrationError = "Vui lòng nhập biển số xe";
+                        registrationError = "Vui lòng kiểm tra lại biển số xe";
                         return;
                     }
+                    // set normalized plate into working field
+                    newVehiclePlateNumber = NormalizePlate(vehicleModel.PlateNumber);
                     if (string.IsNullOrWhiteSpace(newVehicleType))
                     {
                         registrationError = "Vui lòng chọn loại xe";
@@ -1526,11 +1542,13 @@
                     registrationError = "Vui lòng nhập họ tên khách hàng";
                     return;
                 }
-                if (string.IsNullOrWhiteSpace(newVehiclePlateNumber))
+                // validate vehicle model for new customer
+                if (vehicleEditContext == null || !vehicleEditContext.Validate())
                 {
-                    registrationError = "Vui lòng nhập biển số xe";
+                    registrationError = "Vui lòng kiểm tra lại biển số xe";
                     return;
                 }
+                newVehiclePlateNumber = NormalizePlate(vehicleModel.PlateNumber);
                 if (string.IsNullOrWhiteSpace(newVehicleType))
                 {
                     registrationError = "Vui lòng chọn loại xe";
@@ -1555,48 +1573,60 @@
         registrationError = string.Empty;
 	}
     private async Task SubmitRegistration()
-    {
-        if (selectedSlot == null) return;
+     {
+         
+         if (selectedSlot == null) return;
 
-        try
-        {
-            isSubmitting = true;
-            registrationError = string.Empty;
+         try
+         {
+             isSubmitting = true;
+             registrationError = string.Empty;
 
-            var request = new StaffRegisterParkingRequest
-            {
-                SlotId = selectedSlot.SlotId,
-                StaffId = currentStaffId,
-                CustomerPhone = phoneNumber
-            };
+             var request = new StaffRegisterParkingRequest
+             {
+                 SlotId = selectedSlot.SlotId,
+                 StaffId = currentStaffId,
+                 CustomerPhone = phoneNumber
+             };
 
-            if (customerCheckResult?.Exists == true)
-            {
-                // Customer đã tồn tại
-                request.CustomerId = customerCheckResult.CustomerId;
+             if (customerCheckResult?.Exists == true)
+             {
+                 // Customer đã tồn tại
+                 request.CustomerId = customerCheckResult.CustomerId;
 
-                if (selectedVehicleId.HasValue)
-                {
-                    // Chọn xe có sẵn
-                    request.VehicleId = selectedVehicleId.Value;
-                }
-                else
-                {
-                    // Thêm xe mới cho customer cũ
-                    request.PlateNumber = newVehiclePlateNumber.Trim();
-                    request.VehicleType = newVehicleType;
-                }
-            }
-            else
-            {
-                // Customer mới
-                request.CustomerName = newCustomerName.Trim();
-                request.CustomerEmail = string.IsNullOrWhiteSpace(newCustomerEmail) ? null : newCustomerEmail.Trim();
-                request.PlateNumber = newVehiclePlateNumber.Trim();
-                request.VehicleType = newVehicleType;
-            }
+                 if (selectedVehicleId.HasValue)
+                 {
+                     // Chọn xe có sẵn
+                     request.VehicleId = selectedVehicleId.Value;
+                 }
+                 else
+                 {
+                     // Thêm xe mới cho customer cũ
+                     // ensure vehicle model is valid as a safety net
+                    if (vehicleEditContext != null && !vehicleEditContext.Validate())
+                    {
+                        registrationError = "Biển số xe không hợp lệ";
+                        return;
+                    }
+                    request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                     request.VehicleType = newVehicleType;
+                 }
+             }
+             else
+             {
+                 // Customer mới
+                 request.CustomerName = newCustomerName.Trim();
+                 request.CustomerEmail = string.IsNullOrWhiteSpace(newCustomerEmail) ? null : newCustomerEmail.Trim();
+                 if (vehicleEditContext != null && !vehicleEditContext.Validate())
+                 {
+                     registrationError = "Biển số xe không hợp lệ";
+                     return;
+                 }
+                 request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                 request.VehicleType = newVehicleType;
+             }
 
-            var response = await SlotService.StaffRegisterParking(request);
+             var response = await SlotService.StaffRegisterParking(request);
 
             if (response.Success)
             {
@@ -1608,15 +1638,15 @@
             {
                 registrationError = response.Message;
             }
-        }
-        catch (Exception ex)
-        {
-            registrationError = $"Lỗi: {ex.Message}";
-        }
-        finally
-        {
-            isSubmitting = false;
-        }
+         }
+         catch (Exception ex)
+         {
+             registrationError = $"Lỗi: {ex.Message}";
+         }
+         finally
+         {
+             isSubmitting = false;
+         }
     }
 
     private async Task HandleCheckOut()
@@ -1692,7 +1722,7 @@
             var vehicle = customerCheckResult.Vehicles.FirstOrDefault(v => v.VehicleId == selectedVehicleId.Value);
             return vehicle?.PlateNumber ?? "";
         }
-        return newVehiclePlateNumber;
+        return string.IsNullOrWhiteSpace(newVehiclePlateNumber) ? vehicleModel?.PlateNumber ?? "" : newVehiclePlateNumber;
     }
 
     private string GetConfirmationVehicleType()
@@ -1731,4 +1761,26 @@
         SlotService.OnParkingRegistered -= HandleParkingRegistered;
         SlotService.OnSlotCheckedOut -= HandleSlotCheckedOut;
     }
+
+    // Vehicle input model for validation
+    private VehicleInputModel vehicleModel = new VehicleInputModel();
+    private EditContext? vehicleEditContext;
+
+    private string NormalizePlate(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        var s = input!.Trim().ToUpperInvariant();
+        // remove spaces and dots, normalize single dash
+        s = s.Replace(" ", "").Replace(".", "");
+        return s;
+    }
+
+    public class VehicleInputModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Vui lòng nhập biển số xe")] 
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{2,3}[A-Za-z]{1,2}[-\s]?[0-9]{3,5}(?:[.\s]?[0-9]{2})?$", ErrorMessage = "Biển số không hợp lệ. Ví dụ: 29A-12345 hoặc 30A-123.45")]
+        [System.ComponentModel.DataAnnotations.StringLength(15, ErrorMessage = "Biển số quá dài")]
+        public string PlateNumber { get; set; } = string.Empty;
+    }
 }
+
