@@ -97,7 +97,15 @@
                                     <div class="mb-3 p-3 border rounded @(comment.UserType == "Staff" ? "bg-light" : "") @(comment.IsInternal ? "border-warning" : "")">
                                         <div class="d-flex justify-content-between mb-2">
                                             <div>
-                                                <strong>@(comment.UserType == "Customer" ? "Customer" : "Staff")</strong>
+                                                <strong>@GetCommentUserName(comment)</strong>
+                                                @if (comment.UserType == "Staff")
+                                                {
+                                                    <span class="badge bg-primary ms-2">Staff</span>
+                                                }
+                                                @if (comment.IsInternal)
+                                                {
+                                                    <span class="badge bg-warning ms-2">Internal Note</span>
+                                                }
                                                 @if (comment.IsInternal)
                                                 {
                                                     <span class="badge bg-warning ms-2">Internal Note</span>
@@ -499,6 +507,22 @@
         "Rejected" => "danger",
         _ => "secondary"
     };
+    private string GetCommentUserName(ReportComment comment)
+    {
+
+        if (comment.UserType == "Customer")
+        {
+            return report?.Customer?.FullName ?? "Customer";
+        }
+        else if (comment.UserType == "Staff")
+        {
+            return report?.AssignedStaff?.FullName ?? "Staff";
+        }
+        else
+        {
+            return "Admin";
+        }
+    }
 
     private string GetPriorityColor(string priority) => priority switch
     {

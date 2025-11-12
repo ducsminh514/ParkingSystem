@@ -180,8 +180,10 @@
                     <button type="button" class="btn-close" @onclick="CloseCustomerModal"></button>
                 </div>
                 <div class="modal-body">
-                    <EditForm Model="currentCustomer" OnValidSubmit="SaveCustomer">
+                    @* Modified modal form to use EditContext and added ValidationSummary *@
+                    <EditForm EditContext="customerEditContext" OnValidSubmit="SaveCustomer">
                         <DataAnnotationsValidator />
+                        <ValidationSummary />
 
                         <div class="mb-3">
                             <label class="form-label">Họ và Tên <span class="text-danger">*</span></label>
@@ -225,6 +227,7 @@
                             </button>
                         </div>
                     </EditForm>
+
                 </div>
             </div>
         </div>
@@ -237,6 +240,7 @@
     private bool isLoading = true;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private EditContext? customerEditContext;
 
     // Modal state
     private bool showCustomerModal = false;
@@ -315,6 +319,7 @@
     {
         currentCustomer = new Customer();
         isEditMode = false;
+        customerEditContext = new EditContext(currentCustomer);
         showCustomerModal = true;
     }
 
@@ -329,6 +334,7 @@
                 PasswordHash = customer.PasswordHash
             };
         isEditMode = true;
+        customerEditContext = new EditContext(currentCustomer);
         showCustomerModal = true;
     }
 
@@ -336,16 +342,38 @@
     {
         showCustomerModal = false;
         currentCustomer = new();
+        customerEditContext = null;
         errorMessage = string.Empty;
     }
+    private string NormalizePhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return string.Empty;
+        var p = phone.Trim();
+        if (p.StartsWith("+84")) p = "0" + p.Substring(3);
+        p = p.Replace(" ", "").Replace("-", "");
+        return p;
+    }
 
+    private string? NormalizeEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        return email.Trim().ToLowerInvariant();
+    }
+    
     private async Task SaveCustomer()
     {
         try
         {
             isSaving = true;
             errorMessage = string.Empty;
-
+            // Ensure client-side validation (safety-net)
+            if (customerEditContext != null && !customerEditContext.Validate())
+            {
+                errorMessage = "Vui lòng kiểm tra lại thông tin khách hàng.";
+                return;
+            }
+            currentCustomer.Phone = NormalizePhone(currentCustomer.Phone);
+            currentCustomer.Email = NormalizeEmail(currentCustomer.Email);
             if (isEditMode)
             {
                 await CustomerService.UpdateCustomerAsync(currentCustomer);

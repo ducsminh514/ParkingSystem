@@ -11,16 +11,17 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
+
                 // Kiểm tra trùng
                 var exists = await _context.Customers
-                    .AnyAsync(c => c.Phone == request.Phone || c.Email == request.Email);
+                    .AnyAsync(c => c.Phone == request.Phone );
 
                 if (exists)
                 {
                     return new AuthResult
                     {
                         Success = false,
-                        Message = "Số điện thoại hoặc email đã tồn tại!"
+                        Message = "Số điện thoại đã tồn tại!"
                     };
                 }
 
@@ -87,14 +88,14 @@ namespace ParkingSystem.Server.Hubs
                         var staff = await _context.Staff
                             .FirstOrDefaultAsync(s => s.Username == request.UsernameOrEmail);
 
-                        //if (staff == null || !BCrypt.Net.BCrypt.Verify(request.Password, staff.PasswordHash))
-                        //{
-                        //    return new AuthResult
-                        //    {
-                        //        Success = false,
-                        //        Message = "Tên đăng nhập hoặc mật khẩu không đúng!"
-                        //    };
-                        //}
+                        if (staff == null || !BCrypt.Net.BCrypt.Verify(request.Password, staff.PasswordHash))
+                        {
+                            return new AuthResult
+                            {
+                                Success = false,
+                                Message = "Tên đăng nhập hoặc mật khẩu không đúng!"
+                            };
+                        }
 
                         return new AuthResult
                         {
@@ -184,6 +185,7 @@ namespace ParkingSystem.Server.Hubs
         public async Task<Customer> AddCustomer(Customer customer)
         {
             customer.CustomerId = Guid.NewGuid();
+            customer.PasswordHash = BCrypt.Net.BCrypt.HashPassword(customer.PasswordHash);
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
