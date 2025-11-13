@@ -22,6 +22,7 @@ public partial class Vehicle
 
     [ForeignKey(nameof(CustomerId))]
     public virtual Customer Customer { get; set; } = null!;
+    public bool HasActiveParking => ParkingRegistrations.Any(pr => pr.Status == "Active" && pr.CheckOutTime == null);
 
     public virtual ICollection<ParkingRegistration> ParkingRegistrations { get; set; } = new List<ParkingRegistration>();
 }

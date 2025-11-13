@@ -145,8 +145,9 @@
                                             </button>
                                             <button class="btn btn-outline-danger"
                                                     @onclick="() => ConfirmDeleteCustomer(customer)"
-                                                    title="Xóa">
-                                                <i class="bi bi-trash"></i>
+                                                    title="@(customer.HasActiveVehicle ? "Không thể xóa khách hàng đang đỗ xe" : "Xóa")" 
+                                                    disabled="@customer.HasActiveVehicle">                                         
+                                                    <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                     </td>

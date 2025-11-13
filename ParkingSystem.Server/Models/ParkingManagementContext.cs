@@ -36,17 +36,7 @@ public partial class ParkingManagementContext : DbContext
     public virtual DbSet<Vehicle> Vehicles { get; set; }
     public virtual DbSet<ParkingPrice> ParkingPrices { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        // Connection string is provided via DI in Program.cs
-        // Only configure if options are not already set
-        if (!optionsBuilder.IsConfigured)
-        {
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-            // Fallback connection string (not used when DI is configured in Program.cs)
-            optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=ParkingManagement;Trusted_Connection=True;TrustServerCertificate=True;");
-        }
-    }
+ 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -113,39 +103,40 @@ public partial class ParkingManagementContext : DbContext
                 .HasConstraintName("FK__CustomerR__Custo__6754599E");
         });
         modelBuilder.Entity<ParkingPrice>().HasData(
-            new ParkingPrice
-            {
-                PriceId = Guid.NewGuid(),
-                VehicleType = "Xe máy",
-                PricePerHour = 5000,
-                IsActive = true,
-                CreatedDate = DateTime.Now
-            },
-            new ParkingPrice
-            {
-                PriceId = Guid.NewGuid(),
-                VehicleType = "Ô tô",
-                PricePerHour = 15000,
-                IsActive = true,
-                CreatedDate = DateTime.Now
-            },
-            new ParkingPrice
-            {
-                PriceId = Guid.NewGuid(),
-                VehicleType = "Xe đạp",
-                PricePerHour = 3000,
-                IsActive = true,
-                CreatedDate = DateTime.Now
-            },
-            new ParkingPrice
-            {
-                PriceId = Guid.NewGuid(),
-                VehicleType = "Xe tải",
-                PricePerHour = 25000,
-                IsActive = true,
-                CreatedDate = DateTime.Now
-            }
-        );
+    new ParkingPrice
+    {
+        PriceId = new Guid("11111111-1111-1111-1111-111111111111"),
+        VehicleType = "Xe máy",
+        PricePerHour = 5000,
+        IsActive = true,
+        CreatedDate = new DateTime(2024, 1, 1, 0, 0, 0)
+    },
+    new ParkingPrice
+    {
+        PriceId = new Guid("22222222-2222-2222-2222-222222222222"),
+        VehicleType = "Ô tô",
+        PricePerHour = 15000,
+        IsActive = true,
+        CreatedDate = new DateTime(2024, 1, 1, 0, 0, 0)
+    },
+    new ParkingPrice
+    {
+        PriceId = new Guid("33333333-3333-3333-3333-333333333333"),
+        VehicleType = "Xe đạp",
+        PricePerHour = 3000,
+        IsActive = true,
+        CreatedDate = new DateTime(2024, 1, 1, 0, 0, 0)
+    },
+    new ParkingPrice
+    {
+        PriceId = new Guid("44444444-4444-4444-4444-444444444444"),
+        VehicleType = "Xe tải",
+        PricePerHour = 25000,
+        IsActive = true,
+        CreatedDate = new DateTime(2024, 1, 1, 0, 0, 0)
+    }
+);
+
         modelBuilder.Entity<ParkingRegistration>(entity =>
         {
             entity.HasKey(e => e.RegistrationId).HasName("PK__ParkingR__6EF58830A5FDD2FF");

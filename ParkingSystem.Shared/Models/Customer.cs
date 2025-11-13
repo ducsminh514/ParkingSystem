@@ -22,6 +22,7 @@ public partial class Customer
     public string PasswordHash { get; set; } = null!;
 
     public virtual ICollection<CustomerReport> CustomerReports { get; set; } = new List<CustomerReport>();
-
+    public bool IsDeleted { get; set; } = false;
+    public bool HasActiveVehicle => Vehicles.Any(v => v.HasActiveParking);
     public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

@@ -155,7 +155,9 @@ namespace ParkingSystem.Server.Hubs
             try
             {
                 var customers = await _context.Customers
+                    .Where(c => !c.IsDeleted) // Chỉ lấy khách hàng chưa bị xóa
                     .Include(c => c.Vehicles)
+                    .ThenInclude(v => v.ParkingRegistrations)
                     .OrderBy(c => c.FullName)
                     .ToListAsync();
 
@@ -172,6 +174,7 @@ namespace ParkingSystem.Server.Hubs
         public async Task<Customer> GetCustomerById(Guid customerId)
         {
             var customer = await _context.Customers
+                .Where(c => !c.IsDeleted) // Chỉ lấy khách hàng chưa bị xóa
                 .Include(c => c.Vehicles)
                 .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
@@ -217,8 +220,19 @@ namespace ParkingSystem.Server.Hubs
             var customer = await _context.Customers.FindAsync(customerId);
             if (customer == null)
                 throw new HubException("Không tìm thấy khách hàng");
+            
+            var hasActiveParking = await _context.Vehicles
+                .Where(v => v.CustomerId == customerId)
+                .SelectMany(v => v.ParkingRegistrations)
+                .AnyAsync(pr => pr.Status == "Active" && pr.CheckOutTime == null);
 
-            _context.Customers.Remove(customer);
+            if (hasActiveParking)
+            {
+                throw new HubException("Không thể xóa khách hàng có xe đang đỗ trong bãi!");
+            }
+
+            customer.IsDeleted = true; // Đánh dấu là đã xóa
+            _context.Customers.Update(customer); // Cập nhật trạng thái
             await _context.SaveChangesAsync();
 
             await Clients.All.SendAsync("CustomerDeleted", customerId);
@@ -231,9 +245,9 @@ namespace ParkingSystem.Server.Hubs
                 return await GetAllCustomers();
 
             return await _context.Customers
-                .Where(c => c.FullName.Contains(keyword)
+                .Where(c=> !c.IsDeleted && (c.FullName.Contains(keyword)
                          || c.Phone.Contains(keyword)
-                         || c.Email.Contains(keyword))
+                         || c.Email.Contains(keyword)))
                 .Include(c => c.Vehicles)
                 .ToListAsync();
         }
@@ -242,8 +256,8 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
-                // CÁCH 1: Gộp chung 1 chain Include
                 var customer = await _context.Customers
+                    .Where(c => !c.IsDeleted && c.CustomerId == customerId) // Chỉ lấy khách hàng chưa bị xóa
                     .Include(c => c.Vehicles)
                     .ThenInclude(v => v.ParkingRegistrations.OrderByDescending(pr => pr.CheckInTime))
                     .ThenInclude(pr => pr.Slot)
@@ -251,8 +265,8 @@ namespace ParkingSystem.Server.Hubs
                     .ThenInclude(v => v.ParkingRegistrations)
                     .ThenInclude(pr => pr.Payments)
                     .AsNoTracking()
-                    .AsSplitQuery() // QUAN TRỌNG: Tránh cartesian explosion
-                    .FirstOrDefaultAsync(c => c.CustomerId == customerId);
+                    .AsSplitQuery()
+                    .FirstOrDefaultAsync();
 
                 return customer;
             }
