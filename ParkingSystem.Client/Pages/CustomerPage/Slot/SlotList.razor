@@ -144,55 +144,58 @@
                     <div class="parking-grid">
                         @foreach (var slot in area.Slots)
                         {
-                            var isMySlot = !slot.IsAvailable && slot.CustomerId == currentCustomerId;
-                            
-                            <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied") @(isMySlot ? "my-slot" : "")"
-                                 @onclick="() => OpenSlotModal(slot)"
-                                 title="@(slot.IsAvailable ? "Click để đăng ký" : isMySlot ? "Chỗ đỗ của bạn - Click để xem chi tiết" : "Đã có người sử dụng")">
-                                <div class="slot-icon">
-                                    @if (slot.IsAvailable)
+                            if (slot.Status != "Maintenance")
+                            {
+                                var isMySlot = !slot.IsAvailable && slot.CustomerId == currentCustomerId;
+
+                                <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied") @(isMySlot ? "my-slot" : "")"
+                                     @onclick="() => OpenSlotModal(slot)"
+                                     title="@(slot.IsAvailable ? "Click để đăng ký" : isMySlot ? "Chỗ đỗ của bạn - Click để xem chi tiết" : "Đã có người sử dụng")">
+                                    <div class="slot-icon">
+                                        @if (slot.IsAvailable)
+                                        {
+                                            <i class="bi bi-p-square"></i>
+                                        }
+                                        else if (isMySlot)
+                                        {
+                                            <i class="bi bi-star-fill"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-car-front-fill"></i>
+                                        }
+                                    </div>
+                                    <div class="slot-code">@slot.SlotCode</div>
+
+                                    @if (isMySlot)
                                     {
-                                        <i class="bi bi-p-square"></i>
+                                        <!-- Chỉ hiển thị info nếu là slot của mình -->
+                                        <div class="slot-info">
+                                            <small class="d-block text-truncate fw-bold">
+                                                <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
+                                            </small>
+                                            @if (slot.CheckInTime.HasValue)
+                                            {
+                                                <small class="d-block">
+                                                    <i class="bi bi-clock"></i> @slot.ParkingDuration
+                                                </small>
+                                            }
+                                            <div class="my-slot-badge">
+                                                <i class="bi bi-person-check-fill"></i> Của bạn
+                                            </div>
+                                        </div>
                                     }
-                                    else if (isMySlot)
+                                    else if (!slot.IsAvailable)
                                     {
-                                        <i class="bi bi-star-fill"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-car-front-fill"></i>
+                                        <!-- Slot người khác - chỉ hiển thị trạng thái -->
+                                        <div class="slot-status">
+                                            <small class="text-muted">
+                                                <i class="bi bi-lock-fill"></i> Đã sử dụng
+                                            </small>
+                                        </div>
                                     }
                                 </div>
-                                <div class="slot-code">@slot.SlotCode</div>
-                                
-                                @if (isMySlot)
-                                {
-                                    <!-- Chỉ hiển thị info nếu là slot của mình -->
-                                    <div class="slot-info">
-                                        <small class="d-block text-truncate fw-bold">
-                                            <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
-                                        </small>
-                                        @if (slot.CheckInTime.HasValue)
-                                        {
-                                            <small class="d-block">
-                                                <i class="bi bi-clock"></i> @slot.ParkingDuration
-                                            </small>
-                                        }
-                                        <div class="my-slot-badge">
-                                            <i class="bi bi-person-check-fill"></i> Của bạn
-                                        </div>
-                                    </div>
-                                }
-                                else if (!slot.IsAvailable)
-                                {
-                                    <!-- Slot người khác - chỉ hiển thị trạng thái -->
-                                    <div class="slot-status">
-                                        <small class="text-muted">
-                                            <i class="bi bi-lock-fill"></i> Đã sử dụng
-                                        </small>
-                                    </div>
-                                }
-                            </div>
+                            }
                         }
                     </div>
                 </div>

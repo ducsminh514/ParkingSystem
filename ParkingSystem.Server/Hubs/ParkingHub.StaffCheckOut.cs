@@ -75,7 +75,7 @@ namespace ParkingSystem.Server.Hubs
                 // Lấy giá theo loại xe
                 var vehicleType = registration.Vehicle?.VehicleType ?? "Xe máy";
                 var price = await _context.ParkingPrices
-                    .FirstOrDefaultAsync(p => p.VehicleType == vehicleType && p.IsActive);
+                    .FirstOrDefaultAsync(p => p.VehicleType == vehicleType );
 
                 if (price == null)
                 {

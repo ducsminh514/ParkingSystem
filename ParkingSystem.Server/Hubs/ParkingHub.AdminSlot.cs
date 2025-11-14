@@ -40,7 +40,6 @@ namespace ParkingSystem.Server.Hubs
                         AvailableSlots = g.Count(s => s.Status == "Available"),
                         InUseSlots = g.Count(s => s.Status == "InUse"),
                         MaintenanceSlots = g.Count(s => s.Status == "Maintenance"),
-                        ReservedSlots = g.Count(s => s.Status == "Reserved"),
                         Slots = g.Select(s =>
                         {
                             var currentReg = s.ParkingRegistrations

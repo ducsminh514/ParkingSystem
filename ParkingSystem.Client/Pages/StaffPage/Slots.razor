@@ -145,22 +145,39 @@
                     <div class="parking-grid">
                         @foreach (var slot in area.Slots)
                         {
-                            <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied")"
+                                var statusClass = slot.Status switch
+                                {
+                                    "Available" => "available",
+                                    "InUse" => "occupied",
+                                    "Maintenance" => "maintenance",
+                                    _ => ""
+                                };
+                                
+                                var statusIcon = slot.Status switch
+                                {
+                                    "Available" => "bi-p-square",
+                                    "InUse" => "bi-car-front-fill",
+                                    "Maintenance" => "bi-tools",
+                                    _ => "bi-question-circle"
+                                };
+                                
+                                var statusTitle = slot.Status switch
+                                {
+                                    "Available" => "Sẵn sàng",
+                                    "InUse" => "Đang sử dụng",
+                                    "Maintenance" => "Đang bảo trì",
+                                    _ => "Trạng thái không xác định"
+                                };
+                            
+                            <div class="parking-slot @statusClass"
                                  @onclick="() => OpenSlotModal(slot)"
-                                 title="Click để xem chi tiết">
+                                 title="@statusTitle - Click để xem chi tiết" >
                                 <div class="slot-icon">
-                                    @if (slot.IsAvailable)
-                                    {
-                                        <i class="bi bi-p-square"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-car-front-fill"></i>
-                                    }
+                                    <i class="bi @statusIcon"></i>
                                 </div>
                                 <div class="slot-code">@slot.SlotCode</div>
                                 
-                                @if (!slot.IsAvailable && !string.IsNullOrEmpty(slot.VehiclePlateNumber))
+                                @if (slot.Status == "InUse" && !string.IsNullOrEmpty(slot.VehiclePlateNumber))
                                 {
                                     <div class="slot-info">
                                         <small class="d-block text-truncate fw-bold">
@@ -178,6 +195,14 @@
                                                 <i class="bi bi-clock"></i> @slot.ParkingDuration
                                             </small>
                                         }
+                                    </div>
+                                }
+                                else if (slot.Status == "Maintenance")
+                                {
+                                    <div class="slot-info">
+                                        <small class="d-block text-truncate fw-bold text-center">
+                                            Maintenancing
+                                        </small>
                                     </div>
                                 }
                             </div>
@@ -814,12 +839,15 @@
                                 <i class="bi bi-x-lg"></i> Đóng
                             </button>
 
-                            <button type="button"
-                                    class="btn btn-danger"
-                                    @onclick="ShowCheckoutScreen">
-                                <i class="bi bi-box-arrow-right"></i>
-                                <span>Check Out</span>
-                            </button>
+                            @if (selectedSlot.Status != "Maintenance")
+                            {
+                                <button type="button"
+                                        class="btn btn-danger"
+                                        @onclick="ShowCheckoutScreen">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span>Check Out</span>
+                                </button>
+                            }
                         }
                     }
                 </div>
