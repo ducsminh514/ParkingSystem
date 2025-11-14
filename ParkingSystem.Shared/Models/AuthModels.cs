@@ -1,15 +1,31 @@
 namespace ParkingSystem.Shared.Models;
+using System.ComponentModel.DataAnnotations;
 
-// Request đăng ký
+// Register Request
 public class RegisterRequest
 {
-    public string FullName { get; set; } = null!;
-    public string Phone { get; set; } = null!;
+    [Required(ErrorMessage = "Full name is required")]
+    [StringLength(100, ErrorMessage = "Full name cannot exceed 100 characters")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Phone number is required")]
+    [RegularExpression(@"^\+?\d{9,15}$", ErrorMessage = "Invalid phone number")]
+    public string Phone { get; set; } = string.Empty;
+
+    [EmailAddress(ErrorMessage = "Invalid email address")]
     public string? Email { get; set; }
-    public string Password { get; set; } = null!;
+
+    [Required(ErrorMessage = "Password is required")]
+    [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+    [DataType(DataType.Password)]
+    public string Password { get; set; } = string.Empty;
+
+    [Compare("Password", ErrorMessage = "Passwords do not match")]
+    [DataType(DataType.Password)]
+    public string? ConfirmPassword { get; set; }
 }
 
-// Request đăng nhập
+// Login Request
 public class LoginRequest
 {
     public string UsernameOrEmail { get; set; } = null!;
@@ -17,7 +33,7 @@ public class LoginRequest
     public bool IsStaff { get; set; } // true = Staff, false = Customer
 }
 
-// Response sau khi đăng nhập/đăng ký
+// Response after login/register
 public class AuthResult
 {
     public bool Success { get; set; }
@@ -25,12 +41,12 @@ public class AuthResult
     public UserInfo? UserInfo { get; set; }
 }
 
-// Thông tin user
+// User information
 public class UserInfo
 {
     public Guid UserId { get; set; }
     public string FullName { get; set; } = null!;
-    public string UserType { get; set; } = null!; // "Customer" hoặc "Staff"
+    public string UserType { get; set; } = null!; // "Customer" or "Staff"
     public string? Email { get; set; }
     public string? Phone { get; set; }
 }

@@ -71,9 +71,9 @@ public class NotificationBackgroundService : BackgroundService
         var context = scope.ServiceProvider.GetRequiredService<ParkingManagementContext>();
 
         var now = DateTime.Now;
-        var nearExpiry = now.AddHours(2); // Thông báo trước 2 tiếng
+        var nearExpiry = now.AddHours(2); // Notify 2 hours before expiration
 
-        // Tìm xe sắp hết hạn (còn dưới 2h)
+        // Find vehicles with parking registrations expiring within 2 hours
         var expiringRegistrations = await context.ParkingRegistrations
             .Include(pr => pr.Vehicle)
                 .ThenInclude(v => v.Customer)
@@ -92,13 +92,13 @@ public class NotificationBackgroundService : BackgroundService
 
             var message = new
             {
-                Title = "⏰ Sắp hết thời gian đỗ xe",
-                Message = $"Xe {registration.Vehicle.PlateNumber} đang đỗ tại chỗ {registration.Slot.SlotCode} còn {hours}h {minutes}ph. Vui lòng di chuyển xe hoặc gia hạn.",
+                Title = "⏰ Your parking session is about to expire",
+                Message = $"Vehicle {registration.Vehicle.PlateNumber} in slot {registration.Slot.SlotCode} has {hours}h {minutes}m remaining. Please move your vehicle or extend your parking.",
                 Type = "warning",
                 Timestamp = DateTime.Now
             };
 
-            // Gửi thông báo real-time tới customer
+            // Send real-time notification to customer
             await _hubContext.Clients
                 .User(registration.Vehicle.CustomerId.ToString())
                 .SendAsync("ReceiveNotification", message);

@@ -18,24 +18,24 @@
     <nav class="flex-column">
         <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Trang chủ
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
             </NavLink>
         </div>
 
         <AuthorizeView Roles="Customer">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="my-vehicles">
-                    <span class="bi bi-car-front-fill" aria-hidden="true"></span> Xe của tôi
+                    <span class="bi bi-car-front-fill" aria-hidden="true"></span> My Vehicles
                 </NavLink>
             </div>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="my-bookings">
-                    <span class="bi bi-calendar-check-fill" aria-hidden="true"></span> Đặt chỗ của tôi
+                <NavLink class="nav-link" href="parking-history">
+                    <span class="bi bi-calendar-check-fill" aria-hidden="true"></span> My Reservations
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="profile">
-                    <span class="bi bi-person-circle" aria-hidden="true"></span> Hồ sơ
+                    <span class="bi bi-person-circle" aria-hidden="true"></span> Profile
                 </NavLink>
             </div>
         </AuthorizeView>
@@ -43,17 +43,17 @@
         <AuthorizeView Roles="Staff">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="customers">
-                    <span class="bi bi-people-fill" aria-hidden="true"></span> Khách hàng
+                    <span class="bi bi-people-fill" aria-hidden="true"></span> Customers
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="parking-slots">
-                    <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Quản lý chỗ đỗ
+                    <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Parking Slot Management
                 </NavLink>
             </div>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="reports">
-                    <span class="bi bi-graph-up" aria-hidden="true"></span> Báo cáo
+                <NavLink class="nav-link" href="staff/reports">
+                    <span class="bi bi-graph-up" aria-hidden="true"></span> Reports
                 </NavLink>
             </div>
         </AuthorizeView>
@@ -77,19 +77,19 @@
                 </div>
                 <div class="nav-item px-3">
                     <button class="nav-link btn btn-link w-100 text-start text-danger" @onclick="Logout">
-                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Đăng xuất
+                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
                     </button>
                 </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link btn-login" href="login">
-                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Đăng nhập
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link btn-register" href="register">
-                        <span class="bi bi-person-plus-fill" aria-hidden="true"></span> Đăng ký
+                        <span class="bi bi-person-plus-fill" aria-hidden="true"></span> Register
                     </NavLink>
                 </div>
             </NotAuthorized>

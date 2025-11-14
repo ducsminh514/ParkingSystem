@@ -1,0 +1,582 @@
+﻿@page "/admin/pricing"
+@using ParkingSystem.Shared.DTOs
+@using ParkingSystem.Client.Services
+@inject AdminService AdminService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Admin - Price Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h3><i class="bi bi-cash-coin"></i> Pricing Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-success" @onclick="OpenAddModal">
+                <i class="bi bi-plus-circle"></i> Add New Price
+            </button>
+            <button class="btn btn-outline-primary ms-2" @onclick="LoadPrices">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading pricing list...</p>
+        </div>
+    }
+    else if (prices.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No pricing entries found</p>
+            <button class="btn btn-primary mt-2" @onclick="OpenAddModal">
+                <i class="bi bi-plus-circle"></i> Add First Price
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- PRICE TABLE DISPLAY -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 25%">
+                                    <i class="bi bi-car-front"></i> Vehicle Type
+                                </th>
+                                <th style="width: 20%">
+                                    <i class="bi bi-cash-stack"></i> Hourly Price
+                                </th>
+                                <th style="width: 15%">
+                                    <i class="bi bi-toggle-on"></i> Status
+                                </th>
+                                <th style="width: 15%">
+                                    <i class="bi bi-calendar"></i> Created At
+                                </th>
+                                <th style="width: 15%">
+                                    <i class="bi bi-calendar-check"></i> Updated
+                                </th>
+                                <th style="width: 5%" class="text-center">
+                                    <i class="bi bi-gear"></i> Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var (price, index) in prices.Select((p, i) => (p, i)))
+                            {
+                                <tr class="@(price.IsActive ? "" : "table-secondary opacity-75")">
+                                    <td class="fw-bold">@(index + 1)</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-car-front-fill me-2 fs-5 @(price.IsActive ? "text-primary" : "text-muted")"></i>
+                                            <span class="fw-bold">@price.VehicleType</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success fs-6 px-3 py-2">
+                                            @price.PriceDisplay
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (price.IsActive)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Active
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-x-circle"></i> Inactive
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @price.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @(price.UpdatedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => OpenEditModal(price)"
+                                                    title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm @(price.IsActive ? "btn-outline-warning" : "btn-outline-success")" 
+                                                    @onclick="() => ToggleStatus(price.PriceId)"
+                                                    title="@(price.IsActive ? "Disable" : "Enable")">
+                                                <i class="bi bi-@(price.IsActive ? "toggle-on" : "toggle-off")"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => DeletePrice(price.PriceId)"
+                                                    title="Delete"
+                                                    disabled="@price.IsActive">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATISTICS -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Total Vehicle Types</h6>
+                        <h3 class="mb-0">@prices.Count</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-success text-white shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Active</h6>
+                        <h3 class="mb-0">@prices.Count(p => p.IsActive)</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-secondary text-white shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">Inactive</h6>
+                        <h3 class="mb-0">@prices.Count(p => !p.IsActive)</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- MODAL ADD/EDIT -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header @(isEditMode ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-@(isEditMode ? "pencil-square" : "plus-circle")"></i>
+                        @(isEditMode ? "Edit Price" : "Add New Price")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Vehicle Type <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               @bind="formModel.VehicleType" 
+                               placeholder="e.g. Motorbike, Car, Bicycle..."
+                               disabled="@isEditMode" />
+                        <small class="text-muted">
+                            @(isEditMode ? "Vehicle type cannot be changed on edit" : "Enter vehicle type")
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Hourly Price (VND) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group input-group-lg">
+                            <input type="number" 
+                                   class="form-control" 
+                                   @bind="formModel.PricePerHour" 
+                                   placeholder="5000"
+                                   min="0"
+                                   step="1000" />
+                            <span class="input-group-text">VND/hour</span>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               id="isActiveSwitch" 
+                               @bind="formModel.IsActive" />
+                        <label class="form-check-label fw-bold" for="isActiveSwitch">
+                            @(formModel.IsActive ? "✓ Active" : "✗ Inactive")
+                        </label>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> @modalError
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" 
+                            class="btn @(isEditMode ? "btn-warning" : "btn-success")" 
+                            @onclick="SavePrice"
+                            disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Processing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            <span>@(isEditMode ? "Update" : "Add")</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Success Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span id="toastMessage">Action succeeded!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .btn-group {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-group .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn-group .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    h3 {
+        font-weight: 700;
+        color: #1F2937;
+    }
+
+    .modal-content {
+        border: none;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .form-control:focus,
+    .form-check-input:focus {
+        border-color: #10B981;
+        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25);
+    }
+
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+    }
+
+    .form-switch .form-check-input:checked {
+        background-color: #10B981;
+        border-color: #10B981;
+    }
+</style>
+
+@code {
+    private List<ParkingPriceDetailDto> prices = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    // Modal state
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool isSubmitting = false;
+    private string modalError = string.Empty;
+    private PriceFormModel formModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Register real-time handlers
+        AdminService.OnPriceUpdated += HandlePriceUpdated;
+        AdminService.OnPriceDeleted += HandlePriceDeleted;
+
+        await LoadPrices();
+    }
+
+    private void HandlePriceUpdated(ParkingPriceDto updatedPrice)
+    {
+        var existingPrice = prices.FirstOrDefault(p => p.PriceId == updatedPrice.PriceId);
+        if (existingPrice != null)
+        {
+            existingPrice.VehicleType = updatedPrice.VehicleType;
+            existingPrice.PricePerHour = updatedPrice.PricePerHour;
+            existingPrice.IsActive = updatedPrice.IsActive;
+            existingPrice.UpdatedDate = DateTime.Now;
+        }
+        else
+        {
+            // Reload to get full details
+            _ = LoadPrices();
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandlePriceDeleted(Guid priceId)
+    {
+        var price = prices.FirstOrDefault(p => p.PriceId == priceId);
+        if (price != null)
+        {
+            price.IsActive = false;
+            price.UpdatedDate = DateTime.Now;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadPrices()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            prices = await AdminService.GetAllPricesAdmin();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        isEditMode = false;
+        formModel = new PriceFormModel { IsActive = true };
+        modalError = string.Empty;
+        showModal = true;
+    }
+
+    private void OpenEditModal(ParkingPriceDetailDto price)
+    {
+        isEditMode = true;
+        formModel = new PriceFormModel
+        {
+            PriceId = price.PriceId,
+            VehicleType = price.VehicleType,
+            PricePerHour = price.PricePerHour,
+            IsActive = price.IsActive
+        };
+        modalError = string.Empty;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formModel = new();
+        modalError = string.Empty;
+    }
+
+    private async Task SavePrice()
+    {
+        try
+        {
+            isSubmitting = true;
+            modalError = string.Empty;
+
+            // Validation
+            if (string.IsNullOrWhiteSpace(formModel.VehicleType))
+            {
+                modalError = "Please enter vehicle type";
+                return;
+            }
+
+            if (formModel.PricePerHour <= 0)
+            {
+                modalError = "Hourly price must be greater than 0";
+                return;
+            }
+
+            var request = new UpsertPriceRequest
+            {
+                PriceId = formModel.PriceId,
+                VehicleType = formModel.VehicleType.Trim(),
+                PricePerHour = formModel.PricePerHour,
+                IsActive = formModel.IsActive
+            };
+
+            var response = await AdminService.UpsertPrice(request);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                CloseModal();
+                await LoadPrices();
+            }
+            else
+            {
+                modalError = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task ToggleStatus(Guid priceId)
+    {
+        try
+        {
+            var response = await AdminService.TogglePriceStatus(priceId);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                await LoadPrices();
+            }
+            else
+            {
+                await ShowToast(response.Message, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowToast($"Error: {ex.Message}", false);
+        }
+    }
+
+    private async Task DeletePrice(Guid priceId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            "Are you sure you want to delete this price? (Only inactive prices can be deleted)");
+
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await AdminService.DeletePrice(priceId);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                await LoadPrices();
+            }
+            else
+            {
+                await ShowToast(response.Message, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowToast($"Error: {ex.Message}", false);
+        }
+    }
+
+    private async Task ShowToast(string message, bool success = true)
+    {
+        // try
+        // {
+        //     await JSRuntime.InvokeVoidAsync("eval", 
+        //         $@"
+        //             const toast = document.getElementById('successToast');
+        //             const toastMsg = document.getElementById('toastMessage');
+        //             if (toast && toastMsg) {{
+        //                 toastMsg.textContent = '{message}';
+        //                 toast.classList.remove('bg-success', 'bg-danger');
+        //                 toast.classList.add('{(success ? "bg-success" : "bg-danger")}');
+        //                 const bsToast = new bootstrap.Toast(toast);
+        //                 bsToast.show();
+        //             }}
+        //         ");
+        // }
+        // catch { }
+    }
+
+    public void Dispose()
+    {
+        AdminService.OnPriceUpdated -= HandlePriceUpdated;
+        AdminService.OnPriceDeleted -= HandlePriceDeleted;
+    }
+
+    // Form model
+    private class PriceFormModel
+    {
+        public Guid? PriceId { get; set; }
+        public string VehicleType { get; set; } = string.Empty;
+        public decimal PricePerHour { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}

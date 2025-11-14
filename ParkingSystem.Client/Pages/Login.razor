@@ -5,54 +5,70 @@
 @inject SimpleAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
-<PageTitle>Đăng nhập</PageTitle>
+<PageTitle>Login</PageTitle>
 
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-5">
-            <div class="card shadow" >
+            <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">🔐 Đăng nhập</h4>
+                    <h4 class="mb-0">🔐 Login</h4>
                 </div>
                 <div class="card-body p-4">
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <div class="alert alert-danger">@errorMessage</div>
+                        <div class="alert alert-danger" role="alert">
+                            @errorMessage
+                        </div>
                     }
 
                     <EditForm Model="loginRequest" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Loại tài khoản:</label>
-                            <select class="form-select" @bind="loginRequest.IsStaff">
-                                <option value="false">👤 Khách hàng</option>
-                                <option value="true">👔 Nhân viên</option>
+                            <label class="form-label fw-bold">Account type:</label>
+                            <select class="form-select" @bind="UserType">
+                                <option value="customer">👤 Customer</option>
+                                <option value="staff">👔 Staff</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">
-                                @(loginRequest.IsStaff ? "Tên đăng nhập" : "Email/SĐT"):
+                                @(UserType == "staff" ? "Username" : "Email/Phone"):
                             </label>
-                            <input type="text" class="form-control" @bind="loginRequest.UsernameOrEmail" required />
+                            <input type="text" class="form-control"
+                                   @bind="loginRequest.UsernameOrEmail"
+                                   required
+                                   placeholder="@(UserType == "staff" ? "Enter username" : "Enter email or phone number")" />
+                            <ValidationMessage For="@(() => loginRequest.UsernameOrEmail)" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu:</label>
-                            <input type="password" class="form-control" @bind="loginRequest.Password" required />
+                            <label class="form-label fw-bold">Password:</label>
+                            <input type="password" class="form-control"
+                                   @bind="loginRequest.Password"
+                                   required
+                                   placeholder="Enter password" />
+                            <ValidationMessage For="@(() => loginRequest.Password)" />
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
                             @if (isLoading)
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Processing...</span>
                             }
-                            Đăng nhập
+                            else
+                            {
+                                <span>Login</span>
+                            }
                         </button>
                     </EditForm>
 
                     <hr class="my-4" />
                     <div class="text-center">
-                        <p class="mb-0">Chưa có tài khoản? <a href="/register" class="fw-bold">Đăng ký ngay</a></p>
+                        <p class="mb-0">Don't have an account? <a href="/register" class="fw-bold">Register now</a></p>
                     </div>
                 </div>
             </div>
@@ -64,10 +80,22 @@
     private LoginRequest loginRequest = new();
     private string? errorMessage;
     private bool isLoading;
+    private string userType = "customer";
 
-    protected override async Task OnInitializedAsync()
+    // Property with setter to automatically handle changes
+    private string UserType
     {
-        
+        get => userType;
+        set
+        {
+            if (userType != value)
+            {
+                userType = value;
+                loginRequest.IsStaff = value == "staff";
+                loginRequest.UsernameOrEmail = ""; // Clear input when switching type
+                errorMessage = null; // Clear error
+            }
+        }
     }
 
     private async Task HandleLogin()
@@ -77,7 +105,6 @@
 
         try
         {
-            // ✅ Gọi qua service method
             var result = await CustomerService.Login(loginRequest);
 
             if (result.Success && result.UserInfo != null)
@@ -87,12 +114,13 @@
             }
             else
             {
-                errorMessage = result.Message;
+                errorMessage = result.Message ?? "Login failed";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi: {ex.Message}";
+            errorMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"[Login Error] {ex}");
         }
         finally
         {

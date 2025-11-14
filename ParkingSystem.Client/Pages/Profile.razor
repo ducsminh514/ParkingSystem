@@ -8,12 +8,10 @@
 @inject SimpleAuthStateProvider SimpleAuthProvider
 @inject NavigationManager Navigation
 
-
-
-<PageTitle>Hồ sơ cá nhân</PageTitle>
+<PageTitle>Profile</PageTitle>
 
 <div class="container mt-4">
-    <h3><i class="bi bi-person-circle"></i> Hồ sơ cá nhân</h3>
+    <h3><i class="bi bi-person-circle"></i> Profile</h3>
 
     @if (!string.IsNullOrEmpty(successMessage)) 
     {
@@ -32,22 +30,22 @@
     }
 
     <div class="row">
-        <!-- Thông tin cá nhân -->
+        <!-- Personal Information -->
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-person-fill"></i> Thông tin cá nhân</h5>
+                    <h5 class="mb-0"><i class="bi bi-person-fill"></i> Personal Information</h5>
                 </div>
                 <div class="card-body">
                     @if (currentCustomer != null)
                     {
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Họ và tên</label>
+                            <label class="form-label fw-bold">Full Name</label>
                             <input type="text" class="form-control" @bind="currentCustomer.FullName" disabled="@(!isEditingProfile)" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Số điện thoại</label>
+                            <label class="form-label fw-bold">Phone</label>
                             <input type="tel" class="form-control" @bind="currentCustomer.Phone" disabled="@(!isEditingProfile)" />
                         </div>
 
@@ -59,7 +57,7 @@
                         @if (!isEditingProfile)
                         {
                             <button class="btn btn-primary" @onclick="StartEditProfile">
-                                <i class="bi bi-pencil"></i> Chỉnh sửa
+                                <i class="bi bi-pencil"></i> Edit
                             </button>
                         }
                         else
@@ -69,10 +67,10 @@
                                 {
                                     <span class="spinner-border spinner-border-sm me-2"></span>
                                 }
-                                <i class="bi bi-check-lg"></i> Lưu
+                                <i class="bi bi-check-lg"></i> Save
                             </button>
                             <button class="btn btn-secondary" @onclick="CancelEditProfile">
-                                <i class="bi bi-x-lg"></i> Hủy
+                                <i class="bi bi-x-lg"></i> Cancel
                             </button>
                         }
                     }
@@ -80,27 +78,27 @@
             </div>
         </div>
 
-        <!-- Đổi mật khẩu -->
+        <!-- Change Password -->
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-header bg-warning">
-                    <h5 class="mb-0"><i class="bi bi-key-fill"></i> Đổi mật khẩu</h5>
+                    <h5 class="mb-0"><i class="bi bi-key-fill"></i> Change Password</h5>
                 </div>
                 <div class="card-body">
                     <EditForm Model="changePasswordModel" OnValidSubmit="HandleChangePassword">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu hiện tại</label>
+                            <label class="form-label fw-bold">Current Password</label>
                             <input type="password" class="form-control" @bind="changePasswordModel.CurrentPassword" required />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu mới</label>
+                            <label class="form-label fw-bold">New Password</label>
                             <input type="password" class="form-control" @bind="changePasswordModel.NewPassword" required />
-                            <small class="text-muted">Tối thiểu 6 ký tự</small>
+                            <small class="text-muted">At least 6 characters</small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Xác nhận mật khẩu mới</label>
+                            <label class="form-label fw-bold">Confirm New Password</label>
                             <input type="password" class="form-control" @bind="changePasswordModel.ConfirmPassword" required />
                         </div>
 
@@ -109,7 +107,7 @@
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
                             }
-                            <i class="bi bi-shield-lock"></i> Đổi mật khẩu
+                            <i class="bi bi-shield-lock"></i> Change Password
                         </button>
                     </EditForm>
                 </div>
@@ -117,14 +115,14 @@
         </div>
     </div>
 
-    <!-- Thống kê -->
+    <!-- Statistics -->
     <div class="row">
         <div class="col-md-4 mb-4">
             <div class="card text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <div class="card-body">
                     <i class="bi bi-car-front-fill" style="font-size: 3rem;"></i>
                     <h3 class="mt-3">@vehicleCount</h3>
-                    <p class="mb-0">Xe đăng ký</p>
+                    <p class="mb-0">Registered Vehicles</p>
                 </div>
             </div>
         </div>
@@ -133,7 +131,7 @@
                 <div class="card-body">
                     <i class="bi bi-calendar-check-fill" style="font-size: 3rem;"></i>
                     <h3 class="mt-3">@totalBookings</h3>
-                    <p class="mb-0">Lượt đỗ xe</p>
+                    <p class="mb-0">Parking Sessions</p>
                 </div>
             </div>
         </div>
@@ -142,7 +140,7 @@
                 <div class="card-body">
                     <i class="bi bi-clock-history" style="font-size: 3rem;"></i>
                     <h3 class="mt-3">@DateTime.Now.ToString("dd/MM/yyyy")</h3>
-                    <p class="mb-0">Ngày tham gia</p>
+                    <p class="mb-0">Join Date</p>
                 </div>
             </div>
         </div>
@@ -180,7 +178,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi: {ex.Message}";
+            errorMessage = $"Error: {ex.Message}";
         }
     }
 
@@ -188,7 +186,7 @@
     {
         try
         {
-            // Lấy thông tin từ AuthenticationState thay vì gọi API
+            // Get info from AuthenticationState instead of calling API
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var userInfo = await SimpleAuthProvider.GetCurrentUser();
         
@@ -200,7 +198,7 @@
                     FullName = userInfo.FullName,
                     Phone = userInfo.Phone ?? "",
                     Email = userInfo.Email ?? "",
-                    PasswordHash = "" // Không cần hiển thị
+                    PasswordHash = "" // not needed for display
                 };
             
                 originalCustomer = new Customer
@@ -215,7 +213,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Không thể tải thông tin: {ex.Message}";
+            errorMessage = $"Could not load profile: {ex.Message}";
         }
     }
 
@@ -260,7 +258,7 @@
             {
                 await CustomerService.UpdateCustomerAsync(currentCustomer);
                 
-                // Update auth state với tên mới
+                // Update auth state with new name
                 var userInfo = new UserInfo
                 {
                     UserId = currentCustomer.CustomerId,
@@ -280,13 +278,13 @@
                     PasswordHash = currentCustomer.PasswordHash
                 };
 
-                successMessage = "Cập nhật thông tin thành công!";
+                successMessage = "Profile updated successfully!";
                 isEditingProfile = false;
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi: {ex.Message}";
+            errorMessage = $"Error: {ex.Message}";
         }
         finally
         {
@@ -303,25 +301,25 @@
 
             if (changePasswordModel.NewPassword != changePasswordModel.ConfirmPassword)
             {
-                errorMessage = "Mật khẩu xác nhận không khớp!";
+                errorMessage = "Password confirmation does not match!";
                 return;
             }
 
             if (changePasswordModel.NewPassword.Length < 6)
             {
-                errorMessage = "Mật khẩu mới phải có ít nhất 6 ký tự!";
+                errorMessage = "New password must be at least 6 characters!";
                 return;
             }
 
             // Gọi API đổi mật khẩu (cần implement)
             // await ParkingService.ChangePassword(currentCustomerId, changePasswordModel);
 
-            successMessage = "Đổi mật khẩu thành công!";
+            successMessage = "Password changed successfully!";
             changePasswordModel = new();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi: {ex.Message}";
+            errorMessage = $"Error: {ex.Message}";
         }
         finally
         {

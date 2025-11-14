@@ -31,55 +31,55 @@ namespace ParkingSystem.Client.Services
 
         private void RegisterEventHandlers()
         {
-                HubConnection.On<Customer>("CustomerAdded", async (customer) =>
-                {
-                    _logger.LogInformation($"Real-time: Customer added - {customer.FullName}");
-                    if (OnCustomerAdded != null)
-                        await OnCustomerAdded.Invoke(customer);
-                });
+            HubConnection.On<Customer>("CustomerAdded", async (customer) =>
+            {
+                _logger.LogInformation($"Real-time: Customer added - {customer.FullName}");
+                if (OnCustomerAdded != null)
+                    await OnCustomerAdded.Invoke(customer);
+            });
 
-                HubConnection.On<Customer>("CustomerUpdated", async (customer) =>
-                {
-                    _logger.LogInformation($"Real-time: Customer updated - {customer.FullName}");
-                    if (OnCustomerUpdated != null)
-                        await OnCustomerUpdated.Invoke(customer);
-                });
+            HubConnection.On<Customer>("CustomerUpdated", async (customer) =>
+            {
+                _logger.LogInformation($"Real-time: Customer updated - {customer.FullName}");
+                if (OnCustomerUpdated != null)
+                    await OnCustomerUpdated.Invoke(customer);
+            });
 
-                HubConnection.On<Guid>("CustomerDeleted", async (customerId) =>
-                {
-                    _logger.LogInformation($"Real-time: Customer deleted - {customerId}");
-                    if (OnCustomerDeleted != null)
-                        await OnCustomerDeleted.Invoke(customerId);
-                });
+            HubConnection.On<Guid>("CustomerDeleted", async (customerId) =>
+            {
+                _logger.LogInformation($"Real-time: Customer deleted - {customerId}");
+                if (OnCustomerDeleted != null)
+                    await OnCustomerDeleted.Invoke(customerId);
+            });
 
-                // Reconnection events
-                HubConnection.Reconnecting += error =>
-                {
-                    _logger.LogWarning("SignalR đang kết nối lại...");
-                    return Task.CompletedTask;
-                };
-                
-                
-                HubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleAdded", async (vehicle) =>
-                {
-                    _logger.LogInformation($"Real-time: Vehicle added - {vehicle.PlateNumber}");
-                    if (OnVehicleAdded != null)
-                        await OnVehicleAdded.Invoke(vehicle);
-                });
+            // Reconnection events
+            HubConnection.Reconnecting += error =>
+            {
+                _logger.LogWarning("SignalR is reconnecting...");
+                return Task.CompletedTask;
+            };
+            
+            
+            HubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleAdded", async (vehicle) =>
+            {
+                _logger.LogInformation($"Real-time: Vehicle added - {vehicle.PlateNumber}");
+                if (OnVehicleAdded != null)
+                    await OnVehicleAdded.Invoke(vehicle);
+            });
 
-                HubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleUpdated", async (vehicle) =>
-                {
-                    _logger.LogInformation($"Real-time: Vehicle updated - {vehicle.PlateNumber}");
-                    if (OnVehicleUpdated != null)
-                        await OnVehicleUpdated.Invoke(vehicle);
-                });
+            HubConnection.On<ParkingSystem.Shared.Models.Vehicle>("VehicleUpdated", async (vehicle) =>
+            {
+                _logger.LogInformation($"Real-time: Vehicle updated - {vehicle.PlateNumber}");
+                if (OnVehicleUpdated != null)
+                    await OnVehicleUpdated.Invoke(vehicle);
+            });
 
-                HubConnection.On<Guid>("VehicleDeleted", async (vehicleId) =>
-                {
-                    _logger.LogInformation($"Real-time: Vehicle deleted - {vehicleId}");
-                    if (OnVehicleDeleted != null)
-                        await OnVehicleDeleted.Invoke(vehicleId);
-                }); 
+            HubConnection.On<Guid>("VehicleDeleted", async (vehicleId) =>
+            {
+                _logger.LogInformation($"Real-time: Vehicle deleted - {vehicleId}");
+                if (OnVehicleDeleted != null)
+                    await OnVehicleDeleted.Invoke(vehicleId);
+            }); 
         }
 
         // ============ CUSTOMER OPERATIONS ============
@@ -190,7 +190,7 @@ namespace ParkingSystem.Client.Services
         {
             if (HubConnection?.State != HubConnectionState.Connected)
             {
-                throw new InvalidOperationException("SignalR chưa kết nối. Vui lòng thử lại.");
+                throw new InvalidOperationException("SignalR is not connected. Please try again.");
             }
         }
         
@@ -244,7 +244,7 @@ namespace ParkingSystem.Client.Services
             }
         }
 
-// Thêm xe
+        // Add vehicle
         public async Task<ParkingSystem.Shared.Models.Vehicle> AddVehicle(Guid customerId, string plateNumber, string vehicleType)
         {
             EnsureConnected();
@@ -259,7 +259,7 @@ namespace ParkingSystem.Client.Services
             }
         }
 
-// Cập nhật xe
+        // Update vehicle
         public async Task<ParkingSystem.Shared.Models.Vehicle> UpdateVehicle(Guid vehicleId, string plateNumber, string vehicleType)
         {
             EnsureConnected();
@@ -274,7 +274,7 @@ namespace ParkingSystem.Client.Services
             }
         }
 
-// Xóa xe
+        // Delete vehicle
         public async Task DeleteVehicle(Guid vehicleId)
         {
             EnsureConnected();
@@ -289,7 +289,7 @@ namespace ParkingSystem.Client.Services
             }
         }
 
-// Lấy chi tiết xe
+        // Get vehicle details
         public async Task<ParkingSystem.Shared.Models.Vehicle?> GetVehicleDetails(Guid vehicleId)
         {
             EnsureConnected();
@@ -312,7 +312,7 @@ namespace ParkingSystem.Client.Services
             {
                 HubConnection.On<dynamic>("ReceiveNotification", async (notification) =>
                 {
-                    string title = notification.GetProperty("Title").GetString() ?? "Thông báo";
+                    string title = notification.GetProperty("Title").GetString() ?? "Notification";
                     string message = notification.GetProperty("Message").GetString() ?? "";
                     string type = notification.GetProperty("Type").GetString() ?? "info";
 

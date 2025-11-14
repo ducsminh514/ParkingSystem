@@ -5,14 +5,14 @@
 @inject SimpleAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
-<PageTitle>Đăng ký</PageTitle>
+<PageTitle>Register</PageTitle>
 
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow">
                 <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">📝 Đăng ký tài khoản</h4>
+                    <h4 class="mb-0">📝 Create an Account</h4>
                 </div>
                 <div class="card-body p-4">
                     @if (!string.IsNullOrEmpty(errorMessage))
@@ -25,24 +25,37 @@
                     }
 
                     <EditForm Model="registerRequest" OnValidSubmit="HandleRegister">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Họ và tên:</label>
-                            <input type="text" class="form-control" @bind="registerRequest.FullName" required />
+                            <label class="form-label fw-bold">Full Name:</label>
+                            <InputText class="form-control" @bind-Value="registerRequest.FullName" />
+                            <ValidationMessage For="() => registerRequest.FullName" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Số điện thoại:</label>
-                            <input type="tel" class="form-control" @bind="registerRequest.Phone" required />
+                            <label class="form-label fw-bold">Phone Number:</label>
+                            <InputText class="form-control" @bind-Value="registerRequest.Phone" />
+                            <ValidationMessage For="() => registerRequest.Phone" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Email (tùy chọn):</label>
-                            <input type="email" class="form-control" @bind="registerRequest.Email" />
+                            <label class="form-label fw-bold">Email (optional):</label>
+                            <InputText type="email" class="form-control" @bind-Value="registerRequest.Email" />
+                            <ValidationMessage For="() => registerRequest.Email" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu:</label>
-                            <input type="password" class="form-control" @bind="registerRequest.Password" required />
+                            <label class="form-label fw-bold">Password:</label>
+                            <InputText type="password" class="form-control" @bind-Value="registerRequest.Password" />
+                            <ValidationMessage For="() => registerRequest.Password" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Confirm Password:</label>
+                            <InputText type="password" class="form-control" @bind-Value="registerRequest.ConfirmPassword" />
+                            <ValidationMessage For="() => registerRequest.ConfirmPassword" />
                         </div>
 
                         <button type="submit" class="btn btn-success w-100" disabled="@isLoading">
@@ -50,13 +63,13 @@
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
                             }
-                            Đăng ký
+                            Register
                         </button>
                     </EditForm>
 
                     <hr class="my-4" />
                     <div class="text-center">
-                        <p class="mb-0">Đã có tài khoản? <a href="/login" class="fw-bold">Đăng nhập</a></p>
+                        <p class="mb-0">Already have an account? <a href="/login" class="fw-bold">Login</a></p>
                     </div>
                 </div>
             </div>
@@ -70,11 +83,6 @@
     private string? successMessage;
     private bool isLoading;
 
-    protected override async Task OnInitializedAsync()
-    {
-        // Không cần init SignalR ngay
-    }
-
     private async Task HandleRegister()
     {
         isLoading = true;
@@ -87,17 +95,16 @@
 
             if (result.Success)
             {
-                // Tự động đăng nhập sau khi đăng ký thành công
                 if (result.UserInfo != null)
                 {
                     await AuthStateProvider.MarkUserAsAuthenticated(result.UserInfo);
-                    successMessage = "Đăng ký thành công! Đang chuyển trang...";
+                    successMessage = "Registration successful! Redirecting...";
                     await Task.Delay(1500);
                     Navigation.NavigateTo("/", forceLoad: true);
                 }
                 else
                 {
-                    successMessage = result.Message + " Đang chuyển đến trang đăng nhập...";
+                    successMessage = result.Message + " Redirecting to login page...";
                     await Task.Delay(1500);
                     Navigation.NavigateTo("/login");
                 }
@@ -109,7 +116,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi kết nối: {ex.Message}. Vui lòng kiểm tra Server đã chạy chưa.";
+            errorMessage = $"Connection error: {ex.Message}. Please check that the server is running.";
         }
         finally
         {

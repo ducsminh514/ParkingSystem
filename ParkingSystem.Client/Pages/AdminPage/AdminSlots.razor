@@ -1,0 +1,910 @@
+﻿@page "/admin/slots"
+@using ParkingSystem.Shared.DTOs
+@using ParkingSystem.Client.Services
+@inject SlotService SlotService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Admin - Slot Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h3><i class="bi bi-grid-3x3-gap-fill"></i> Parking Slot Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-success" @onclick="OpenAddSlotModal">
+                <i class="bi bi-plus-circle"></i> Add Single Slot
+            </button>
+            <button class="btn btn-primary ms-2" @onclick="OpenBulkAddModal">
+                <i class="bi bi-plus-square-fill"></i> Bulk Add
+            </button>
+            <button class="btn btn-outline-primary ms-2" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- STATISTICS -->
+    @if (statistics != null)
+    {
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="card bg-primary text-white shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0">Total Slots</h6>
+                        <h3 class="mb-0">@statistics.TotalSlots</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-success text-white shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0">Available</h6>
+                        <h3 class="mb-0">@statistics.AvailableSlots</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-danger text-white shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0">In Use</h6>
+                        <h3 class="mb-0">@statistics.InUseSlots</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-warning text-white shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0">Maintenance</h6>
+                        <h3 class="mb-0">@statistics.MaintenanceSlots</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-info text-white shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0">Reserved</h6>
+                        <h3 class="mb-0">@statistics.ReservedSlots</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-secondary text-white shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0">Total Areas</h6>
+                        <h3 class="mb-0">@statistics.TotalAreas</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading data...</p>
+        </div>
+    }
+    else if (areas.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No slots available</p>
+            <button class="btn btn-primary mt-2" @onclick="OpenBulkAddModal">
+                <i class="bi bi-plus-square-fill"></i> Add First Slots
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- AREAS & SLOTS -->
+        @foreach (var area in areas)
+        {
+            <div class="card mb-4 shadow-sm area-card">
+                <div class="card-header @(expandedAreas.Contains(area.AreaPrefix) ? "bg-primary" : "bg-light") 
+                            @(expandedAreas.Contains(area.AreaPrefix) ? "text-white" : "")"
+                     style="cursor: pointer;"
+                     @onclick="() => ToggleArea(area.AreaPrefix)">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="mb-0">
+                                <i class="bi bi-@(expandedAreas.Contains(area.AreaPrefix) ? "chevron-down" : "chevron-right")"></i>
+                                <i class="bi bi-building ms-2"></i> @area.AreaName
+                            </h5>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge @(expandedAreas.Contains(area.AreaPrefix) ? "bg-light text-dark" : "bg-success") me-2">
+                                🟢 @area.AvailableSlots
+                            </span>
+                            <span class="badge @(expandedAreas.Contains(area.AreaPrefix) ? "bg-light text-dark" : "bg-danger") me-2">
+                                🔴 @area.InUseSlots
+                            </span>
+                            <span class="badge @(expandedAreas.Contains(area.AreaPrefix) ? "bg-light text-dark" : "bg-warning") me-2">
+                                🟡 @area.MaintenanceSlots
+                            </span>
+                            <span class="badge @(expandedAreas.Contains(area.AreaPrefix) ? "bg-light text-dark" : "bg-info")">
+                                Total: @area.TotalSlots
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-danger" 
+                             style="width: @(area.OccupancyRate)%"></div>
+                    </div>
+                </div>
+
+                @if (expandedAreas.Contains(area.AreaPrefix))
+                {
+                    <div class="card-body">
+                        <div class="slot-grid">
+                            @foreach (var slot in area.Slots)
+                            {
+                                var statusClass = slot.Status switch
+                                {
+                                    "Available" => "slot-available",
+                                    "InUse" => "slot-inuse",
+                                    "Maintenance" => "slot-maintenance",
+                                    "Reserved" => "slot-reserved",
+                                    _ => "slot-available"
+                                };
+
+                                var statusIcon = slot.Status switch
+                                {
+                                    "Available" => "bi-p-square",
+                                    "InUse" => "bi-car-front-fill",
+                                    "Maintenance" => "bi-tools",
+                                    "Reserved" => "bi-bookmark-fill",
+                                    _ => "bi-p-square"
+                                };
+
+                                <div class="slot-card @statusClass" @onclick="() => OpenSlotDetailModal(slot)">
+                                    <div class="slot-header">
+                                        <i class="bi @statusIcon"></i>
+                                    </div>
+                                    <div class="slot-code">@slot.SlotCode</div>
+                                    <div class="slot-status">@slot.StatusDisplay</div>
+                                    
+                                    @if (slot.HasActiveRegistration && !string.IsNullOrEmpty(slot.VehiclePlateNumber))
+                                    {
+                                        <div class="slot-info mt-2">
+                                            <small class="d-block text-truncate">
+                                                <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
+                                            </small>
+                                        </div>
+                                    }
+
+                                    <div class="slot-actions mt-2">
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                @onclick:stopPropagation="true"
+                                                @onclick="() => OpenEditSlotModal(slot)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm @(slot.CanDelete ? "btn-outline-danger" : "btn-outline-secondary")" 
+                                                @onclick:stopPropagation="true"
+                                                @onclick="() => DeleteSlot(slot.SlotId)"
+                                                disabled="@(!slot.CanDelete)"
+                                                title="@(slot.CanDelete ? "Delete slot" : "Cannot delete (registered vehicle present)")">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<!-- MODAL ADD SINGLE SLOT -->
+@if (showAddSlotModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle"></i> Add New Slot
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddSlotModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Slot Code <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               @bind="newSlotCode" 
+                               placeholder="e.g., A01, B05, VIP10..."
+                               style="text-transform: uppercase;" />
+                        <small class="text-muted">Tip: Area A → A01, A02... | Area B → B01, B02...</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <select class="form-select" @bind="newSlotStatus">
+                            <option value="Available">🟢 Available</option>
+                            <option value="Maintenance">🟡 Maintenance</option>
+                            <option value="Reserved">🔵 Reserved</option>
+                        </select>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> @modalError
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddSlotModal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="SubmitAddSlot" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Processing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            <span>Add Slot</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL BULK ADD -->
+@if (showBulkAddModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-square-fill"></i> Bulk Add Slots
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseBulkAddModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Create multiple slots at once with the same prefix
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Prefix (Area) <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               @bind="bulkPrefix" 
+                               placeholder="e.g., A, B, VIP..."
+                               style="text-transform: uppercase;" />
+                        <small class="text-muted">Enter only letters, not numbers</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                Start Number <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" @bind="bulkStartNumber" min="1" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                End Number <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" @bind="bulkEndNumber" min="1" />
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        Example: Prefix "A", Start 1 End 20 → Create A01, A02, A03... A20
+                    </small>
+
+                    <div class="mb-3 mt-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <select class="form-select" @bind="bulkStatus">
+                            <option value="Available">🟢 Available</option>
+                            <option value="Maintenance">🟡 Maintenance</option>
+                            <option value="Reserved">🔵 Reserved</option>
+                        </select>
+                    </div>
+
+                    @if (bulkStartNumber > 0 && bulkEndNumber > 0 && !string.IsNullOrWhiteSpace(bulkPrefix))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-lightning-fill"></i> 
+                            <strong>@(bulkEndNumber - bulkStartNumber + 1)</strong> slots will be created
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> @modalError
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseBulkAddModal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="SubmitBulkAdd" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            <span>Bulk Create</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL EDIT SLOT -->
+@if (showEditSlotModal && selectedSlot != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square"></i> Edit Slot
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseEditSlotModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Slot Code <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               @bind="editSlotCode" 
+                               style="text-transform: uppercase;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <select class="form-select" @bind="editSlotStatus">
+                            <option value="Available">🟢 Available</option>
+                            <option value="InUse">🔴 In Use</option>
+                            <option value="Maintenance">🟡 Maintenance</option>
+                            <option value="Reserved">🔵 Reserved</option>
+                        </select>
+                    </div>
+
+                    @if (selectedSlot.HasActiveRegistration)
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> This slot currently has a registered vehicle: <strong>@selectedSlot.VehiclePlateNumber</strong>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> @modalError
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditSlotModal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-warning" @onclick="SubmitEditSlot" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Updating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            <span>Update</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span id="toastMessage">Success!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .area-card {
+        transition: all 0.3s ease;
+    }
+
+    .area-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    .slot-card {
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid;
+        position: relative;
+    }
+
+    .slot-card:hover {
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+
+    .slot-available {
+        background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+        border-color: #10B981;
+    }
+
+    .slot-inuse {
+        background: linear-gradient(135deg, #FEE2E2, #FECACA);
+        border-color: #EF4444;
+    }
+
+    .slot-maintenance {
+        background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+        border-color: #F59E0B;
+    }
+
+    .slot-reserved {
+        background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+        border-color: #3B82F6;
+    }
+
+    .slot-header i {
+        font-size: 2rem;
+    }
+
+    .slot-available .slot-header i {
+        color: #059669;
+    }
+
+    .slot-inuse .slot-header i {
+        color: #DC2626;
+    }
+
+    .slot-maintenance .slot-header i {
+        color: #D97706;
+    }
+
+    .slot-reserved .slot-header i {
+        color: #2563EB;
+    }
+
+    .slot-code {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin: 0.5rem 0;
+        color: #1F2937;
+    }
+
+    .slot-status {
+        font-size: 0.75rem;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .slot-info {
+        font-size: 0.8rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .slot-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .slot-actions .btn {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .slot-card:hover .slot-actions .btn {
+        opacity: 1;
+    }
+
+    h3 {
+        font-weight: 700;
+        color: #1F2937;
+    }
+
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .modal-content {
+        border: none;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+</style>
+
+@code {
+    private List<ParkingAreaGroupDto> areas = new();
+    private SlotsStatisticsDto? statistics;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private bool isSubmitting = false;
+    private string modalError = string.Empty;
+
+    // Expanded areas
+    private HashSet<string> expandedAreas = new();
+
+    // Add single slot
+    private bool showAddSlotModal = false;
+    private string newSlotCode = string.Empty;
+    private string newSlotStatus = "Available";
+
+    // Bulk add
+    private bool showBulkAddModal = false;
+    private string bulkPrefix = string.Empty;
+    private int bulkStartNumber = 1;
+    private int bulkEndNumber = 20;
+    private string bulkStatus = "Available";
+
+    // Edit slot
+    private bool showEditSlotModal = false;
+    private SlotManagementDto? selectedSlot = null;
+    private string editSlotCode = string.Empty;
+    private string editSlotStatus = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Register real-time handlers
+        SlotService.OnSlotCreated += HandleSlotCreated;
+        SlotService.OnSlotsBulkCreated += HandleSlotsBulkCreated;
+        SlotService.OnAdminSlotUpdated += HandleSlotUpdated;
+        SlotService.OnSlotDeleted +=HandleSlotDeleted;
+
+        await LoadData();
+    }
+
+    private void HandleSlotCreated(SlotManagementDto newSlot)
+    {
+        _ = LoadData();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSlotsBulkCreated(List<SlotManagementDto> newSlots)
+    {
+        _ = LoadData();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSlotUpdated(SlotManagementDto updatedSlot)
+    {
+        _ = LoadData();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSlotDeleted(Guid slotId)
+    {
+        _ = LoadData();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var areasTask = SlotService.GetSlotsGroupedByArea();
+            var statsTask = SlotService.GetSlotsStatistics();
+
+            await Task.WhenAll(areasTask, statsTask);
+
+            areas = await areasTask;
+            statistics = await statsTask;
+
+            // Auto expand first area
+            if (areas.Count > 0 && expandedAreas.Count == 0)
+            {
+                expandedAreas.Add(areas[0].AreaPrefix);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleArea(string prefix)
+    {
+        if (expandedAreas.Contains(prefix))
+            expandedAreas.Remove(prefix);
+        else
+            expandedAreas.Add(prefix);
+    }
+
+    // Add single slot
+    private void OpenAddSlotModal()
+    {
+        newSlotCode = string.Empty;
+        newSlotStatus = "Available";
+        modalError = string.Empty;
+        showAddSlotModal = true;
+    }
+
+    private void CloseAddSlotModal()
+    {
+        showAddSlotModal = false;
+        modalError = string.Empty;
+    }
+
+    private async Task SubmitAddSlot()
+    {
+        try
+        {
+            isSubmitting = true;
+            modalError = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(newSlotCode))
+            {
+                modalError = "Please enter slot code";
+                return;
+            }
+
+            var request = new CreateSlotRequest
+            {
+                SlotCode = newSlotCode.Trim().ToUpper(),
+                Status = newSlotStatus
+            };
+
+            var response = await SlotService.CreateSlot(request);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                CloseAddSlotModal();
+                await LoadData();
+            }
+            else
+            {
+                modalError = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    // Bulk add
+    private void OpenBulkAddModal()
+    {
+        bulkPrefix = string.Empty;
+        bulkStartNumber = 1;
+        bulkEndNumber = 20;
+        bulkStatus = "Available";
+        modalError = string.Empty;
+        showBulkAddModal = true;
+    }
+
+    private void CloseBulkAddModal()
+    {
+        showBulkAddModal = false;
+        modalError = string.Empty;
+    }
+
+    private async Task SubmitBulkAdd()
+    {
+        try
+        {
+            isSubmitting = true;
+            modalError = string.Empty;
+
+            var request = new BulkCreateSlotsRequest
+            {
+                Prefix = bulkPrefix.Trim().ToUpper(),
+                StartNumber = bulkStartNumber,
+                EndNumber = bulkEndNumber,
+                Status = bulkStatus
+            };
+
+            var response = await SlotService.BulkCreateSlots(request);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                CloseBulkAddModal();
+                await LoadData();
+            }
+            else
+            {
+                modalError = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    // Edit slot
+    private void OpenEditSlotModal(SlotManagementDto slot)
+    {
+        selectedSlot = slot;
+        editSlotCode = slot.SlotCode;
+        editSlotStatus = slot.Status;
+        modalError = string.Empty;
+        showEditSlotModal = true;
+    }
+
+    private void CloseEditSlotModal()
+    {
+        showEditSlotModal = false;
+        selectedSlot = null;
+        modalError = string.Empty;
+    }
+
+    private async Task SubmitEditSlot()
+    {
+        if (selectedSlot == null) return;
+
+        try
+        {
+            isSubmitting = true;
+            modalError = string.Empty;
+
+            var request = new UpdateSlotRequest
+            {
+                SlotId = selectedSlot.SlotId,
+                SlotCode = editSlotCode.Trim().ToUpper(),
+                Status = editSlotStatus
+            };
+
+            var response = await SlotService.UpdateSlot(request);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                CloseEditSlotModal();
+                await LoadData();
+            }
+            else
+            {
+                modalError = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void OpenSlotDetailModal(SlotManagementDto slot)
+    {
+        // TODO: Implement detail modal if needed
+    }
+
+    // Delete slot
+    private async Task DeleteSlot(Guid slotId)
+    {
+        var slot = areas.SelectMany(a => a.Slots).FirstOrDefault(s => s.SlotId == slotId);
+        if (slot == null) return;
+
+        if (!slot.CanDelete)
+        {
+            await ShowToast("Cannot delete a slot with a registered vehicle!", false);
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to delete the slot {slot.SlotCode}?");
+
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await SlotService.DeleteSlot(slotId);
+
+            if (response.Success)
+            {
+                await ShowToast(response.Message);
+                await LoadData();
+            }
+            else
+            {
+                await ShowToast(response.Message, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowToast($"Error: {ex.Message}", false);
+        }
+    }
+
+    private async Task ShowToast(string message, bool success = true)
+    {
+        // try
+        // {
+        //     await JSRuntime.InvokeVoidAsync("eval", 
+        //         $@"
+        //             const toast = document.getElementById('successToast');
+        //             const toastMsg = document.getElementById('toastMessage');
+        //             if (toast && toastMsg) {{
+        //                 toastMsg.textContent = '{message}';
+        //                 toast.classList.remove('bg-success', 'bg-danger');
+        //                 toast.classList.add('{(success ? "bg-success" : "bg-danger")}');
+        //                 const bsToast = new bootstrap.Toast(toast);
+        //                 bsToast.show();
+        //             }}
+        //         ");
+        // }
+        // catch { }
+    }
+
+    public void Dispose()
+    {
+        SlotService.OnSlotCreated -= HandleSlotCreated;
+        SlotService.OnSlotsBulkCreated -= HandleSlotsBulkCreated;
+        SlotService.OnAdminSlotUpdated -= HandleSlotUpdated;
+        SlotService.OnSlotDeleted -=HandleSlotDeleted;
+    }
+}

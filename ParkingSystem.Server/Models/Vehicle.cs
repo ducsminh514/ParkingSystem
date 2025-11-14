@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
-namespace ParkingSystem.Shared.Models;
+
+namespace ParkingSystem.Server.Models;
 using System.ComponentModel.DataAnnotations;
 
 public partial class Vehicle
 {
     public Guid VehicleId { get; set; }
-
 
     [Required(ErrorMessage = "Plate number is required.")]
     [RegularExpression(@"^\d{2}[A-Za-z]{1,2}[-\s]?(?:\d{5}|\d{3}(?:[.\s]?\d{2}))$",
@@ -20,9 +18,8 @@ public partial class Vehicle
 
     public Guid CustomerId { get; set; }
 
-    [ForeignKey(nameof(CustomerId))]
     public virtual Customer Customer { get; set; } = null!;
-    public bool HasActiveParking => ParkingRegistrations.Any(pr => pr.Status == "Active" && pr.CheckOutTime == null);
+    public bool HasActiveParking => ParkingRegistrations.Any(pr => pr.Status == "InUse" && pr.CheckOutTime == null);
 
     public virtual ICollection<ParkingRegistration> ParkingRegistrations { get; set; } = new List<ParkingRegistration>();
 }

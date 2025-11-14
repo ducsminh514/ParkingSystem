@@ -1,0 +1,618 @@
+﻿@page "/admin/staff"
+@using ParkingSystem.Shared.DTOs
+@using ParkingSystem.Client.Services
+@inject IStaffManagementService StaffService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Staff Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h3><i class="bi bi-people-fill"></i> Staff Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-success" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-circle"></i> Add Staff
+            </button>
+            <button class="btn btn-outline-primary" @onclick="RefreshList">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Staff</h6>
+                            <h3 class="mb-0">@staffList.Count</h3>
+                        </div>
+                        <i class="bi bi-people" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Active</h6>
+                            <h3 class="mb-0">@staffList.Count(s => s.ActiveRegistrations > 0)</h3>
+                        </div>
+                        <i class="bi bi-person-check" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Registrations</h6>
+                            <h3 class="mb-0">@staffList.Sum(s => s.TotalRegistrations)</h3>
+                        </div>
+                        <i class="bi bi-clipboard-check" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading staff list...</p>
+        </div>
+    }
+    else if (staffList.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No staff in the system yet</p>
+            <button class="btn btn-primary mt-2" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-circle"></i> Add the first staff
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- Staff Table -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Username</th>
+                                <th>Shift</th>
+                                <th>Total Registrations</th>
+                                <th>Active</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var staff in staffList)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            <i class="bi bi-person-circle text-primary"></i>
+                                            @staff.FullName
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@staff.Username</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(staff.Shift))
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-clock"></i> @staff.Shift
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">@staff.TotalRegistrations</span>
+                                    </td>
+                                    <td>
+                                        @if (staff.ActiveRegistrations > 0)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-activity"></i> @staff.ActiveRegistrations
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">0</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(staff)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStaff(staff)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal Create/Edit -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-@(isEditMode ? "pencil" : "plus-circle")"></i>
+                        @(isEditMode ? "Edit Staff" : "Add New Staff")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Full Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" @bind="formModel.FullName" placeholder="Enter full name" />
+                    </div>
+
+                    @if (!isEditMode)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                Username <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" @bind="formModel.Username" placeholder="Enter username" />
+                            <small class="text-muted">Username cannot be changed after creation</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                Password <span class="text-danger">*</span>
+                            </label>
+                            <input type="password" class="form-control" @bind="formModel.Password" placeholder="Enter password" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Username</label>
+                            <input type="text" class="form-control" value="@formModel.Username" readonly />
+                            <small class="text-muted">Username cannot be changed</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                New Password (leave blank if unchanged)
+                            </label>
+                            <input type="password" class="form-control" @bind="formModel.NewPassword" placeholder="Enter new password" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Shift</label>
+                        <select class="form-select" @bind="formModel.Shift">
+                            <option value="">-- Select shift --</option>
+                            <option value="Sáng">Morning (6am - 2pm)</option>
+                            <option value="Chiều">Afternoon (2pm - 10pm)</option>
+                            <option value="Tối">Night (10pm - 6am)</option>
+                            <option value="Full-time">Full-time</option>
+                        </select>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i> @modalError
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveStaff" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-@(isEditMode ? "save" : "plus-circle")"></i>
+                        }
+                        @(isEditMode ? "Save" : "Create")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    h3 {
+        font-weight: 700;
+        color: #1F2937;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        transition: all 0.3s ease;
+    }
+
+        .card.bg-primary:hover,
+        .card.bg-success:hover,
+        .card.bg-info:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: #6B7280;
+        border-bottom: 2px solid #E5E7EB;
+    }
+
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+        .table tbody tr:hover {
+            background-color: #F9FAFB;
+            transform: translateX(5px);
+        }
+
+    .badge {
+        font-weight: 600;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+    .card {
+        animation: fadeInUp 0.6s ease-in-out;
+    }
+</style>
+
+@code {
+    private List<StaffDto> staffList = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    // Modal state
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool isSubmitting = false;
+    private string modalError = string.Empty;
+
+    // Form model
+    private StaffFormModel formModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to real-time events
+        StaffService.OnStaffCreated += HandleStaffCreated;
+        StaffService.OnStaffUpdated += HandleStaffUpdated;
+        StaffService.OnStaffDeleted += HandleStaffDeleted;
+
+        await LoadStaffList();
+    }
+
+    private async Task LoadStaffList()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var response = await StaffService.GetAllStaffs();
+
+            if (response.Success)
+            {
+                staffList = response.Staffs;
+                Console.WriteLine($"[LoadStaffList] Loaded {staffList.Count} staffs");
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load staff list: {ex.Message}";
+            Console.WriteLine($"[LoadStaffList Error] {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshList()
+    {
+        await LoadStaffList();
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        formModel = new StaffFormModel();
+        modalError = string.Empty;
+        showModal = true;
+    }
+
+    private void OpenEditModal(StaffDto staff)
+    {
+        isEditMode = true;
+        formModel = new StaffFormModel
+        {
+            StaffId = staff.StaffId,
+            FullName = staff.FullName,
+            Username = staff.Username,
+            Shift = staff.Shift
+        };
+        modalError = string.Empty;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        isEditMode = false;
+        formModel = new StaffFormModel();
+        modalError = string.Empty;
+    }
+
+    private async Task SaveStaff()
+    {
+        try
+        {
+            isSubmitting = true;
+            modalError = string.Empty;
+
+            // Validate
+            if (string.IsNullOrWhiteSpace(formModel.FullName))
+            {
+                modalError = "Please enter full name";
+                return;
+            }
+
+            if (!isEditMode)
+            {
+                // Create mode - validate all fields
+                if (string.IsNullOrWhiteSpace(formModel.Username))
+                {
+                    modalError = "Please enter username";
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(formModel.Password))
+                {
+                    modalError = "Please enter password";
+                    return;
+                }
+
+                if (formModel.Password.Length < 6)
+                {
+                    modalError = "Password must be at least 6 characters";
+                    return;
+                }
+
+                // Create new staff
+                var createRequest = new CreateStaffRequest
+                {
+                    FullName = formModel.FullName.Trim(),
+                    Username = formModel.Username.Trim(),
+                    Password = formModel.Password,
+                    Shift = string.IsNullOrWhiteSpace(formModel.Shift) ? null : formModel.Shift
+                };
+
+                var response = await StaffService.CreateStaff(createRequest);
+
+                if (response.Success)
+                {
+                    await ShowToast($"✅ Created staff {formModel.FullName} successfully!");
+                    CloseModal();
+                    await RefreshList();
+                }
+                else
+                {
+                    modalError = response.Message;
+                }
+            }
+            else
+            {
+                // Edit mode
+                var updateRequest = new UpdateStaffRequest
+                {
+                    StaffId = formModel.StaffId,
+                    FullName = formModel.FullName.Trim(),
+                    Shift = string.IsNullOrWhiteSpace(formModel.Shift) ? null : formModel.Shift,
+                    NewPassword = string.IsNullOrWhiteSpace(formModel.NewPassword) ? null : formModel.NewPassword
+                };
+
+                if (!string.IsNullOrWhiteSpace(formModel.NewPassword) && formModel.NewPassword.Length < 6)
+                {
+                    modalError = "New password must be at least 6 characters";
+                    return;
+                }
+
+                var response = await StaffService.UpdateStaff(updateRequest);
+
+                if (response.Success)
+                {
+                    await ShowToast($"✅ Updated information for {formModel.FullName} successfully!");
+                    CloseModal();
+                    await RefreshList();
+                }
+                else
+                {
+                    modalError = response.Message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Error: {ex.Message}";
+            Console.WriteLine($"[SaveStaff Error] {ex}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteStaff(StaffDto staff)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"Are you sure you want to delete staff \"{staff.FullName}\"?\n" +
+            $"Username: {staff.Username}\n" +
+            $"Total registrations: {staff.TotalRegistrations}\n\n" +
+            "Note: Deletion is not allowed if this staff already has registration history."
+        );
+
+        if (!confirmed) return;
+
+        try
+        {
+            var request = new DeleteStaffRequest { StaffId = staff.StaffId };
+            var response = await StaffService.DeleteStaff(request);
+
+            if (response.Success)
+            {
+                await ShowToast($"✅ Deleted staff {staff.FullName}");
+                await RefreshList();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting: {ex.Message}";
+            Console.WriteLine($"[DeleteStaff Error] {ex}");
+        }
+    }
+
+    // Real-time event handlers
+    private async void HandleStaffCreated(StaffDto staff)
+    {
+        await InvokeAsync(() =>
+        {
+            Console.WriteLine($"[UI] Staff created: {staff.FullName}");
+            if (!staffList.Any(s => s.StaffId == staff.StaffId))
+            {
+                staffList.Add(staff);
+                staffList = staffList.OrderBy(s => s.FullName).ToList();
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async void HandleStaffUpdated(StaffDto staff)
+    {
+        await InvokeAsync(() =>
+        {
+            Console.WriteLine($"[UI] Staff updated: {staff.FullName}");
+            var existing = staffList.FirstOrDefault(s => s.StaffId == staff.StaffId);
+            if (existing != null)
+            {
+                existing.FullName = staff.FullName;
+                existing.Shift = staff.Shift;
+                existing.TotalRegistrations = staff.TotalRegistrations;
+                existing.ActiveRegistrations = staff.ActiveRegistrations;
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async void HandleStaffDeleted(Guid staffId)
+    {
+        await InvokeAsync(() =>
+        {
+            Console.WriteLine($"[UI] Staff deleted: {staffId}");
+            var staff = staffList.FirstOrDefault(s => s.StaffId == staffId);
+            if (staff != null)
+            {
+                staffList.Remove(staff);
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task ShowToast(string message)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("alert", message);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ShowToast Error] {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        StaffService.OnStaffCreated -= HandleStaffCreated;
+        StaffService.OnStaffUpdated -= HandleStaffUpdated;
+        StaffService.OnStaffDeleted -= HandleStaffDeleted;
+    }
+
+    // Form model class
+    private class StaffFormModel
+    {
+        public Guid StaffId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? NewPassword { get; set; }
+        public string? Shift { get; set; }
+    }
+}

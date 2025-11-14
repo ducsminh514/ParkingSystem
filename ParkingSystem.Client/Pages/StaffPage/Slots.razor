@@ -1,0 +1,1784 @@
+﻿@page "/staff/slots"
+@using ParkingSystem.Shared.Models
+@using ParkingSystem.Shared.DTOs
+@using ParkingSystem.Client.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using ParkingSystem.Shared.DTOs
+@inject SlotService SlotService 
+@inject IJSRuntime JSRuntime
+@inject UserService UserService
+@implements IDisposable
+
+<PageTitle>Slot Management - Staff</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h3><i class="bi bi-p-square-fill"></i> Parking Slot Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary" @onclick="RefreshSlots">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Overview -->
+    @if (overview != null)
+    {
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Total Slots</h6>
+                                <h3 class="mb-0">@overview.TotalSlots</h3>
+                            </div>
+                            <i class="bi bi-grid-3x3-gap-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Available</h6>
+                                <h3 class="mb-0">@overview.AvailableSlots</h3>
+                            </div>
+                            <i class="bi bi-check-circle-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Occupied</h6>
+                                <h3 class="mb-0">@overview.OccupiedSlots</h3>
+                            </div>
+                            <i class="bi bi-x-circle-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Occupancy Rate</h6>
+                                <h3 class="mb-0">@overview.OccupancyRate%</h3>
+                            </div>
+                            <i class="bi bi-pie-chart-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading parking slot data...</p>
+        </div>
+    }
+    else if (parkingAreas.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No parking slots in the system</p>
+        </div>
+    }
+    else
+    {
+        <!-- Display by area -->
+        @foreach (var area in parkingAreas)
+        {
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="mb-0">
+                                <i class="bi bi-building"></i> @area.AreaName
+                            </h5>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-success me-2">
+                                <i class="bi bi-check-circle"></i> Available: @area.AvailableSlots
+                            </span>
+                            <span class="badge bg-danger me-2">
+                                <i class="bi bi-x-circle"></i> Occupied: @area.OccupiedSlots
+                            </span>
+                            <span class="badge bg-info">
+                                Rate: @area.OccupancyRate%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div class="progress-bar bg-danger" 
+                             role="progressbar" 
+                             style="width: @(area.OccupancyRate)%"
+                             aria-valuenow="@area.OccupancyRate" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="parking-grid">
+                        @foreach (var slot in area.Slots)
+                        {
+                            <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied")"
+                                 @onclick="() => OpenSlotModal(slot)"
+                                 title="Click to view details">
+                                <div class="slot-icon">
+                                    @if (slot.IsAvailable)
+                                    {
+                                        <i class="bi bi-p-square"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-car-front-fill"></i>
+                                    }
+                                </div>
+                                <div class="slot-code">@slot.SlotCode</div>
+                                
+                                @if (!slot.IsAvailable && !string.IsNullOrEmpty(slot.VehiclePlateNumber))
+                                {
+                                    <div class="slot-info">
+                                        <small class="d-block text-truncate fw-bold">
+                                            <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
+                                        </small>
+                                        @if (!string.IsNullOrEmpty(slot.CustomerName))
+                                        {
+                                            <small class="d-block text-truncate">
+                                                <i class="bi bi-person"></i> @slot.CustomerName
+                                            </small>
+                                        }
+                                        @if (slot.CheckInTime.HasValue)
+                                        {
+                                            <small class="d-block">
+                                                <i class="bi bi-clock"></i> @slot.ParkingDuration
+                                            </small>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- SLOT REGISTRATION MODAL -->
+@if (selectedSlot != null && showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header @(selectedSlot.IsAvailable ? "bg-success" : "bg-danger") text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-info-circle"></i> 
+                        @if (selectedSlot.IsAvailable)
+                        {
+                            <span>Register Parking Slot - @selectedSlot.SlotCode</span>
+                        }
+                        else
+                        {
+                            <span>Slot Details - @selectedSlot.SlotCode</span>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedSlot.IsAvailable)
+                    {
+                        <!-- REGISTRATION WORKFLOW FOR EMPTY SLOT -->
+                        
+                        <!-- Step Indicator -->
+                        <div class="step-indicator mb-4">
+                            <div class="step @(registrationStep >= 1 ? "active" : "") @(registrationStep > 1 ? "completed" : "")">
+                                <div class="step-number">1</div>
+                                <div class="step-label">Phone Number</div>
+                            </div>
+                            <div class="step-line @(registrationStep > 1 ? "completed" : "")"></div>
+                            <div class="step @(registrationStep >= 2 ? "active" : "") @(registrationStep > 2 ? "completed" : "")">
+                                <div class="step-number">2</div>
+                                <div class="step-label">Information</div>
+                            </div>
+                            <div class="step-line @(registrationStep > 2 ? "completed" : "")"></div>
+                            <div class="step @(registrationStep >= 3 ? "active" : "")">
+                                <div class="step-number">3</div>
+                                <div class="step-label">Confirmation</div>
+                            </div>
+                        </div>
+
+                        @if (registrationStep == 1)
+                        {
+                            <!-- STEP 1: INPUT PHONE -->
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Enter customer's phone number to check
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                    <input type="tel" 
+                                           class="form-control" 
+                                           @bind="phoneNumber" 
+                                           @bind:event="oninput"
+                                           placeholder="Enter phone number (10-11 digits)"
+                                           maxlength="11"
+                                           disabled="@isCheckingPhone" />
+                                    <button class="btn btn-primary" 
+                                            @onclick="CheckPhone" 
+                                            disabled="@(isCheckingPhone || string.IsNullOrWhiteSpace(phoneNumber))">
+                                        @if (isCheckingPhone)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-search me-2"></i>
+                                        }
+                                        Check
+                                    </button>
+                                </div>
+                                <small class="text-muted">e.g.: 0987654321</small>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(registrationError))
+                            {
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> @registrationError
+                                </div>
+                            }
+                        }
+                        else if (registrationStep == 2)
+                        {
+                            <!-- STEP 2: CUSTOMER & VEHICLE INFO -->
+                            
+                            @if (customerCheckResult?.Exists == true)
+                            {
+                                <!-- CUSTOMER EXISTS -->
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle"></i> Customer found
+                                </div>
+
+                                <!-- Customer info (READ-ONLY) -->
+                                <div class="card mb-3 border-success">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="bi bi-person-circle"></i> Customer Info</h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Name:</strong> @customerCheckResult.FullName</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Phone:</strong> @customerCheckResult.Phone</p>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(customerCheckResult.Email))
+                                            {
+                                                <div class="col-12">
+                                                    <p class="mb-0"><strong>Email:</strong> @customerCheckResult.Email</p>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Select vehicle -->
+                                @if (customerCheckResult.Vehicles.Count > 0)
+                                {
+                                    <h6 class="mb-3"><i class="bi bi-car-front"></i> Select customer's vehicle:</h6>
+                                    <div class="list-group mb-3">
+                                        @foreach (var vehicle in customerCheckResult.Vehicles)
+                                        {
+                                            var isParked = vehicle.IsCurrentlyParked;
+                                            <button type="button"
+                                                    class="list-group-item list-group-item-action @(selectedVehicleId == vehicle.VehicleId ? "active" : "") @(isParked ? "disabled" : "")"
+                                                    @onclick="() => SelectExistingVehicle(vehicle.VehicleId)"
+                                                    disabled="@isParked">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">
+                                                            <i class="bi bi-credit-card-2-front"></i> @vehicle.PlateNumber
+                                                        </h6>
+                                                        <small class="@(selectedVehicleId == vehicle.VehicleId ? "text-white" : "text-muted")">
+                                                            <i class="bi bi-car-front"></i> @vehicle.VehicleType
+                                                            @if (isParked)
+                                                            {
+                                                                <span class="badge bg-warning text-dark ms-2">
+                                                                    <i class="bi bi-geo-alt-fill"></i> Currently parked at @vehicle.CurrentSlotCode
+                                                                </span>
+                                                            }
+                                                        </small>
+                                                    </div>
+                                                    @if (selectedVehicleId == vehicle.VehicleId)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill" style="font-size: 1.5rem;"></i>
+                                                    }
+                                                </div>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Customer has no vehicles. Please add a new vehicle.
+                                    </div>
+                                }
+
+                                <!-- Option to add new vehicle -->
+                                @if (customerCheckResult.Vehicles.Count == 0 || showAddVehicleForm)
+                                {
+                                    <EditForm EditContext="@vehicleEditContext">
+                                        <div class="card border-primary">
+                                            <div class="card-body">
+                                                <h6 class="card-title">
+                                                    <i class="bi bi-plus-circle"></i> Add new vehicle
+                                                    @if (customerCheckResult.Vehicles.Count > 0)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary float-end" @onclick="() => showAddVehicleForm = false">
+                                                            <i class="bi bi-x"></i> Cancel
+                                                        </button>
+                                                    }
+                                                </h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <DataAnnotationsValidator />
+                                                        <ValidationSummary />
+                                                        <label class="form-label">Plate Number <span class="text-danger">*</span></label>
+                                                        <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="e.g.: 29A-12345" />
+                                                        <ValidationMessage For="@(() => vehicleModel.PlateNumber)" />
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Vehicle Type <span class="text-danger">*</span></label>
+                                                        <select class="form-select" @bind="newVehicleType">
+                                                            <option value="">-- Select vehicle type --</option>
+                                                            <option value="Motorbike">Motorbike</option>
+                                                            <option value="Car">Car</option>
+                                                            <option value="Bicycle">Bicycle</option>
+                                                            <option value="Truck">Truck</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </EditForm>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => showAddVehicleForm = true">
+                                        <i class="bi bi-plus-circle"></i> Add new vehicle
+                                    </button>
+                                }
+                            }
+                            else
+                            {
+                                <!-- NEW CUSTOMER -->
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-person-plus"></i> New customer - please enter info
+                                </div>
+
+                                <div class="card border-warning mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="bi bi-person-circle"></i> Customer Info</h6>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" @bind="newCustomerName" placeholder="Enter name" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                                <input type="tel" class="form-control" @bind="phoneNumber" readonly />
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Email (optional)</label>
+                                                <input type="email" class="form-control" @bind="newCustomerEmail" placeholder="Enter email" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <EditForm EditContext="@vehicleEditContext">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <h6 class="card-title"><i class="bi bi-car-front"></i> Vehicle Info</h6>
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <DataAnnotationsValidator />
+                                                    <ValidationSummary />
+                                                    <label class="form-label">Plate Number <span class="text-danger">*</span></label>
+                                                    <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="e.g.: 29A-12345" />
+                                                    <ValidationMessage For="@(() => vehicleModel.PlateNumber)" />
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Vehicle Type <span class="text-danger">*</span></label>
+                                                    <select class="form-select" @bind="newVehicleType">
+                                                        <option value="">-- Select vehicle type --</option>
+                                                        <option value="Motorbike">Motorbike</option>
+                                                        <option value="Car">Car</option>
+                                                        <option value="Bicycle">Bicycle</option>
+                                                        <option value="Truck">Truck</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </EditForm>
+                            }
+
+                            @if (!string.IsNullOrEmpty(registrationError))
+                            {
+                                <div class="alert alert-danger mt-3">
+                                    <i class="bi bi-exclamation-triangle"></i> @registrationError
+                                </div>
+                            }
+                        }
+                        else if (registrationStep == 3)
+                        {
+                            <!-- STEP 3: CONFIRMATION -->
+                            <div class="alert alert-success">
+                                <i class="bi bi-clipboard-check"></i> Please review the information before registering
+                            </div>
+
+                            <div class="confirmation-card">
+                                <h5 class="mb-3"><i class="bi bi-file-earmark-text"></i> Registration Info</h5>
+                                
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="info-box">
+                                            <label>Slot</label>
+                                            <div class="info-value">
+                                                <i class="bi bi-p-square text-success"></i> 
+                                                <strong>@selectedSlot.SlotCode</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <div class="info-box bg-light">
+                                            <h6><i class="bi bi-person-circle"></i> Customer</h6>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label>Name:</label>
+                                                    <div class="info-value">@GetConfirmationCustomerName()</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>Phone:</label>
+                                                    <div class="info-value">@phoneNumber</div>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(GetConfirmationEmail()))
+                                                {
+                                                    <div class="col-12">
+                                                        <label>Email:</label>
+                                                        <div class="info-value">@GetConfirmationEmail()</div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="info-box bg-light">
+                                            <h6><i class="bi bi-car-front"></i> Vehicle</h6>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label>Plate Number:</label>
+                                                    <div class="info-value fw-bold text-primary">@GetConfirmationPlateNumber()</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>Vehicle Type:</label>
+                                                    <div class="info-value">@GetConfirmationVehicleType()</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(registrationError))
+                            {
+                                <div class="alert alert-danger mt-3">
+                                    <i class="bi bi-exclamation-triangle"></i> @registrationError
+                                </div>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        @if (showCheckoutConfirmation)
+                        {
+                            <!-- STEP 2: DISPLAY FEE & CONFIRMATION -->
+                            @if (feeCalculation == null)
+                            {
+                                <!-- LOADING FEE INFO -->
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Calculating fee...</p>
+                                </div>
+                            }
+                            else if (!feeCalculation.Success)
+                            {
+                                <!-- FEE CALC ERROR -->
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle-fill"></i> @feeCalculation.Message
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- DISPLAY FEE INFO -->
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-circle-fill"></i> Please review information before confirming check-out
+                                </div>
+
+                                <!-- Timeline Check-in/Check-out -->
+                                <div class="timeline-card mb-4">
+                                    <div class="timeline-item">
+                                        <div class="timeline-icon bg-success">
+                                            <i class="bi bi-box-arrow-in-right"></i>
+                                        </div>
+                                        <div class="timeline-content flex-grow-1">
+                                            <label>Check-in Time</label>
+                                            <div class="fw-bold fs-5">@feeCalculation.CheckInTime.ToString("dd/MM/yyyy HH:mm:ss")</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="timeline-connector"></div>
+
+                                    <div class="timeline-item">
+                                        <div class="timeline-icon bg-danger">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                        </div>
+                                        <div class="timeline-content flex-grow-1">
+                                            <label>Check-out Time (estimated)</label>
+                                            <div class="fw-bold fs-5">@feeCalculation.CheckOutTime.ToString("dd/MM/yyyy HH:mm:ss")</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-center mt-3">
+                                        <span class="badge bg-primary" style="font-size: 1.1rem; padding: 0.75rem 1.25rem;">
+                                            <i class="bi bi-clock-history"></i>
+                                            Duration: @feeCalculation.DurationDisplay
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Vehicle & Customer Info -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Plate Number</label>
+                                            <div class="fw-bold fs-5">
+                                                <i class="bi bi-credit-card-2-front text-primary"></i>
+                                                @feeCalculation.VehiclePlateNumber
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Vehicle Type</label>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-car-front text-primary"></i>
+                                                @feeCalculation.VehicleType
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Customer</label>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-person text-success"></i>
+                                                @feeCalculation.CustomerName
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-item">
+                                            <label class="text-muted small">Phone</label>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-telephone text-success"></i>
+                                                @feeCalculation.CustomerPhone
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fee Calculation Details -->
+                                <div class="fee-calculation-card">
+                                    <h5 class="mb-3">
+                                        <i class="bi bi-calculator"></i> Fee Calculation Details
+                                    </h5>
+
+                                    <div class="fee-details mb-3">
+                                        <div class="fee-row">
+                                            <span class="fee-label">
+                                                <i class="bi bi-tag"></i> Price (@feeCalculation.VehicleType):
+                                            </span>
+                                            <span class="fee-value">
+                                                @string.Format("{0:N0}", feeCalculation.PricePerHour) VND/hour
+                                            </span>
+                                        </div>
+
+                                        <div class="fee-row">
+                                            <span class="fee-label">
+                                                <i class="bi bi-clock"></i> Total hours:
+                                            </span>
+                                            <span class="fee-value">
+                                                @feeCalculation.TotalHours.ToString("0.00") hours
+                                            </span>
+                                        </div>
+
+                                        <hr class="my-3" />
+
+                                        <div class="fee-row total">
+                                            <span class="fee-label fw-bold fs-5">
+                                                <i class="bi bi-cash-coin"></i> TOTAL:
+                                            </span>
+                                            <span class="fee-value fw-bold text-danger" style="font-size: 1.75rem;">
+                                                @string.Format("{0:N0}", feeCalculation.TotalAmount) VND
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Formula -->
+                                    <div class="alert alert-light mb-0">
+                                        <small class="text-muted">
+                                            <i class="bi bi-info-circle"></i>
+                                            Formula: @string.Format("{0:N0}", feeCalculation.PricePerHour) VND/hour × @feeCalculation.TotalHours.ToString("0.00") hours = @string.Format("{0:N0}", feeCalculation.TotalAmount) VND
+                                        </small>
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(registrationError))
+                                {
+                                    <div class="alert alert-danger mt-3">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> @registrationError
+                                    </div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <!-- STEP 1: SHOW SLOT INFO AS BEFORE -->
+                            <div class="alert alert-danger">
+                                <i class="bi bi-x-circle-fill"></i> This parking slot is currently occupied
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Plate Number</label>
+                                        <div class="fw-bold fs-5">
+                                            <i class="bi bi-credit-card-2-front text-primary"></i> @selectedSlot.VehiclePlateNumber
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Vehicle Type</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-car-front text-primary"></i> @(selectedSlot.VehicleType ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Customer</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-person text-success"></i> @(selectedSlot.CustomerName ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Phone</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-telephone text-success"></i> @(selectedSlot.CustomerPhone ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Check-in Time</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-clock-history text-info"></i> @(selectedSlot.CheckInTime?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <label class="text-muted small">Parking Duration</label>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-hourglass-split text-warning"></i> @(selectedSlot.ParkingDuration ?? "N/A")
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    @if (selectedSlot.IsAvailable)
+                    {
+                        @if (registrationStep > 1)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="PreviousStep" disabled="@isSubmitting">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                                <i class="bi bi-x-lg"></i> Close
+                            </button>
+                        }
+                        
+                        @if (registrationStep < 3)
+                        {
+                            <button type="button" class="btn btn-primary" @onclick="NextStep" disabled="@isSubmitting">
+                                Next <i class="bi bi-arrow-right"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-success" @onclick="SubmitRegistration" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Processing...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle"></i>
+                                    <span>Confirm Registration</span>
+                                }
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        @if (showCheckoutConfirmation)
+                        {
+                            <!-- FOOTER FOR FEE CONFIRMATION -->
+                            <button type="button" class="btn btn-secondary" @onclick="BackToSlotInfo" disabled="@isSubmitting">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </button>
+
+                            @if (feeCalculation != null && feeCalculation.Success)
+                            {
+                                <button type="button"
+                                        class="btn btn-danger btn-lg"
+                                        @onclick="HandleCheckOut"
+                                        disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Processing...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        <span>Confirm Check-out (@string.Format("{0:N0}", feeCalculation.TotalAmount) VND)</span>
+                                    }
+                                </button>
+                            }
+                        }
+                        else
+                        {
+                            <!-- FOOTER FOR SLOT INFO SCREEN -->
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                                <i class="bi bi-x-lg"></i> Close
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-danger"
+                                    @onclick="ShowCheckoutScreen">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Check Out</span>
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Success Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span id="toastMessage">Action successful!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Grid layout for parking slots */
+    .parking-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.25rem;
+        padding: 1rem 0.5rem;
+    }
+
+    /* Style for each slot */
+    .parking-slot {
+        min-height: 200px;
+        border: none;
+        border-radius: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        padding: 1.25rem 1rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+
+    .parking-slot::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .parking-slot:hover::before {
+        opacity: 1;
+    }
+
+    .parking-slot:hover {
+        transform: translateY(-8px) scale(1.03);
+        box-shadow: 0 20px 35px rgba(0,0,0,0.15);
+    }
+
+    .parking-slot.available {
+        background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 50%, #6EE7B7 100%);
+        border: 2px solid #10B981;
+    }
+
+    .parking-slot.available::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #10B981, #059669);
+    }
+
+    .parking-slot.available .slot-icon {
+        color: #059669;
+    }
+
+    .parking-slot.occupied {
+        background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 50%, #FCA5A5 100%);
+        border: 2px solid #EF4444;
+    }
+
+    .parking-slot.occupied::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #EF4444, #DC2626);
+    }
+
+    .parking-slot.occupied .slot-icon {
+        color: #DC2626;
+    }
+
+    .slot-icon {
+        font-size: 2.75rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .parking-slot:hover .slot-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .slot-code {
+        font-weight: 700;
+        font-size: 1.15rem;
+        text-align: center;
+        margin-bottom: 0.5rem;
+        color: #1F2937;
+        letter-spacing: 0.5px;
+    }
+
+    .slot-info {
+        width: 100%;
+        margin-top: auto;
+        padding-top: 0.75rem;
+        border-top: 2px solid rgba(0,0,0,0.1);
+        font-size: 0.8rem;
+        line-height: 1.5;
+    }
+
+    .slot-info small {
+        color: #374151;
+        font-weight: 500;
+    }
+
+    /* Step Indicator */
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 0;
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #E5E7EB;
+        color: #6B7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .step.active .step-number {
+        background: #3B82F6;
+        color: white;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    }
+
+    .step.completed .step-number {
+        background: #10B981;
+        color: white;
+    }
+
+    .step.completed .step-number::after {
+        content: '✓';
+    }
+
+    .step-label {
+        margin-top: 8px;
+        font-size: 0.875rem;
+        color: #6B7280;
+        font-weight: 500;
+    }
+
+    .step.active .step-label {
+        color: #3B82F6;
+        font-weight: 600;
+    }
+
+    .step-line {
+        width: 80px;
+        height: 2px;
+        background: #E5E7EB;
+        margin: 0 10px;
+        position: relative;
+        top: -12px;
+    }
+
+    .step-line.completed {
+        background: #10B981;
+    }
+
+    /* Info boxes */
+    .info-item {
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+        border-radius: 0.75rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #4F46E5;
+        transition: all 0.3s ease;
+    }
+
+    .info-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .info-item label {
+        margin-bottom: 0.5rem;
+        display: block;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+    }
+
+    /* Confirmation card */
+    .confirmation-card {
+        background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+        border: 2px solid #0EA5E9;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .info-box {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid #E5E7EB;
+    }
+
+    .info-box label {
+        font-size: 0.75rem;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-box .info-value {
+        font-size: 1rem;
+        color: #1F2937;
+        font-weight: 500;
+    }
+
+    .info-box h6 {
+        color: #1F2937;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #E5E7EB;
+    }
+
+    /* List group */
+    .list-group-item {
+        border-radius: 0.5rem !important;
+        margin-bottom: 0.5rem;
+        border: 2px solid #E5E7EB;
+        transition: all 0.3s ease;
+    }
+
+    .list-group-item:hover:not(.active):not(.disabled) {
+        border-color: #10B981;
+        background-color: #F0FDF4;
+        transform: translateX(5px);
+    }
+
+    .list-group-item.active {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        border-color: #059669;
+    }
+
+    .list-group-item.disabled {
+        background-color: #FEF3C7;
+        border-color: #F59E0B;
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    /* Cards */
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card.bg-primary:hover,
+    .card.bg-success:hover,
+    .card.bg-danger:hover,
+    .card.bg-info:hover {
+        transform: translateY(-5px) scale(1.02);
+    }
+
+    h3 {
+        font-weight: 700;
+        color: #1F2937;
+    }
+
+    .badge {
+        font-weight: 600;
+        padding: 0.5rem 0.85rem;
+        font-size: 0.85rem;
+    }
+
+    .progress {
+        height: 8px;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:active {
+        transform: scale(0.97);
+    }
+
+    /* Payment section styles */
+    .payment-section {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .timeline-card {
+        background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+        border: 2px solid #0EA5E9;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .timeline-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .timeline-content label {
+        font-size: 0.75rem;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .timeline-connector {
+        width: 2px;
+        height: 30px;
+        background: #0EA5E9;
+        margin-left: 24px;
+    }
+
+    .fee-calculation-card {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border: 2px solid #F59E0B;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .total-amount {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .payment-methods {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .form-check-inline {
+        background: white;
+        border: 2px solid #E5E7EB;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-check-inline:has(input:checked) {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        border-color: #059669;
+        color: white;
+    }
+
+    .form-check-inline:has(input:checked) label {
+        color: white;
+    }
+</style>
+
+@code {
+    private List<ParkingAreaDto> parkingAreas = new();
+    private ParkingOverviewDto? overview;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    // User info
+    private Guid currentStaffId;
+
+    // Modal state
+    private ParkingSlotDto? selectedSlot = null;
+    private bool showModal = false;
+    private bool isSubmitting = false;
+
+    // Registration workflow
+    private int registrationStep = 1; // 1: Phone, 2: Info, 3: Confirm
+    private string phoneNumber = string.Empty;
+    private bool isCheckingPhone = false;
+    private string registrationError = string.Empty;
+    
+    // Customer check result
+    private CustomerCheckResult? customerCheckResult = null;
+    private bool showCheckoutConfirmation = false;
+    // New customer data
+    private string newCustomerName = string.Empty;
+    private string newCustomerEmail = string.Empty;
+    
+    // Vehicle selection
+    private Guid? selectedVehicleId = null;
+    private bool showAddVehicleForm = false;
+    private string newVehiclePlateNumber = string.Empty;
+    private string newVehicleType = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentStaffId = await UserService.GetCurrentUserId();
+        
+        // Register real-time handlers
+        SlotService.OnSlotUpdated += HandleSlotUpdated;
+        SlotService.OnParkingRegistered += HandleParkingRegistered;
+        SlotService.OnSlotCheckedOut += HandleSlotCheckedOut;
+
+        await LoadParkingData();
+    }
+
+    private void HandleSlotUpdated(ParkingSlotDto updatedSlot)
+    {
+        foreach (var area in parkingAreas)
+        {
+            var slot = area.Slots.FirstOrDefault(s => s.SlotId == updatedSlot.SlotId);
+            if (slot != null)
+            {
+                slot.Status = updatedSlot.Status;
+                slot.VehiclePlateNumber = updatedSlot.VehiclePlateNumber;
+                slot.VehicleType = updatedSlot.VehicleType;
+                slot.CustomerName = updatedSlot.CustomerName;
+                slot.CustomerPhone = updatedSlot.CustomerPhone;
+                slot.CheckInTime = updatedSlot.CheckInTime;
+                slot.CurrentRegistrationId = updatedSlot.CurrentRegistrationId;
+
+                area.AvailableSlots = area.Slots.Count(s => s.IsAvailable);
+                area.OccupiedSlots = area.Slots.Count(s => !s.IsAvailable);
+
+                InvokeAsync(StateHasChanged);
+                break;
+            }
+        }
+
+        if (overview != null)
+        {
+            overview.AvailableSlots = parkingAreas.Sum(a => a.AvailableSlots);
+            overview.OccupiedSlots = parkingAreas.Sum(a => a.OccupiedSlots);
+            overview.OccupancyRate = overview.TotalSlots > 0
+                ? Math.Round((double)overview.OccupiedSlots / overview.TotalSlots * 100, 1)
+                : 0;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleParkingRegistered(RegisterParkingResponse response)
+    {
+        if (response.Success && response.UpdatedSlot != null)
+        {
+            HandleSlotUpdated(response.UpdatedSlot);
+        }
+    }
+
+    private async void HandleSlotCheckedOut(Guid slotId)
+    {
+        await LoadParkingData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadParkingData()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            if (!SlotService.IsConnected)
+            {
+                errorMessage = "Connecting to server...";
+                StateHasChanged();
+
+                bool reconnected = await SlotService.TryReconnectAsync();
+                if (!reconnected)
+                {
+                    errorMessage = "Unable to connect to server. Please check and try again.";
+                    return;
+                }
+
+                errorMessage = string.Empty;
+            }
+
+            var overviewTask = SlotService.GetParkingOverviewAsync();
+            var areasTask = SlotService.GetSlotsByAreaAsync();
+
+            await Task.WhenAll(overviewTask, areasTask);
+
+            overview = await overviewTask;
+            parkingAreas = await areasTask;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshSlots()
+    {
+        await LoadParkingData();
+        await ShowToast("Refreshed parking slots list");
+    }
+
+    private void OpenSlotModal(ParkingSlotDto slot)
+    {
+        selectedSlot = slot;
+        showModal = true;
+        
+        if (slot.IsAvailable)
+        {
+            // Reset registration workflow
+            registrationStep = 1;
+            phoneNumber = string.Empty;
+            customerCheckResult = null;
+            newCustomerName = string.Empty;
+            newCustomerEmail = string.Empty;
+            selectedVehicleId = null;
+            showAddVehicleForm = false;
+            newVehiclePlateNumber = string.Empty;
+            // Initialize/clear vehicle input model and edit context
+            vehicleModel = new VehicleInputModel();
+            vehicleEditContext = new EditContext(vehicleModel);
+            registrationError = string.Empty;
+        }
+        else
+        {
+            // Slot is used - calculate fee
+            _ = LoadFeeCalculation();
+        }
+    }
+
+    // ============ CHECK-OUT WITH PAYMENT ============
+
+    private CalculateFeeResponse? feeCalculation = null;
+    private bool isCalculatingFee = false;
+    private string selectedPaymentMethod = "Cash";
+
+    private async Task LoadFeeCalculation()
+    {
+        if (selectedSlot?.CurrentRegistrationId == null) return;
+
+        try
+        {
+            isCalculatingFee = true;
+            registrationError = string.Empty;
+
+            feeCalculation = await SlotService.CalculateParkingFee(selectedSlot.CurrentRegistrationId.Value);
+
+            if (!feeCalculation.Success)
+            {
+                registrationError = feeCalculation.Message;
+                feeCalculation = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            registrationError = $"Fee calculation error: {ex.Message}";
+            feeCalculation = null;
+        }
+        finally
+        {
+            isCalculatingFee = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        selectedSlot = null;
+        registrationError = string.Empty;
+    }
+
+    // ============ REGISTRATION WORKFLOW ============
+
+    private async Task CheckPhone()
+    {
+        try
+        {
+            registrationError = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                registrationError = "Please enter phone number";
+                return;
+            }
+
+            if (phoneNumber.Length < 10 || phoneNumber.Length > 11)
+            {
+                registrationError = "Phone number must be 10-11 digits";
+                return;
+            }
+
+            isCheckingPhone = true;
+            StateHasChanged();
+
+            customerCheckResult = await SlotService.CheckCustomerByPhone(phoneNumber);
+            
+            // Go to step 2
+            registrationStep = 2;
+        }
+        catch (Exception ex)
+        {
+            registrationError = $"Error during check: {ex.Message}";
+        }
+        finally
+        {
+            isCheckingPhone = false;
+        }
+    }
+
+    private void SelectExistingVehicle(Guid vehicleId)
+    {
+        selectedVehicleId = vehicleId;
+        showAddVehicleForm = false;
+        newVehiclePlateNumber = string.Empty;
+        newVehicleType = string.Empty;
+        registrationError = string.Empty;
+    }
+
+    private void PreviousStep()
+    {
+        if (registrationStep > 1)
+        {
+            registrationStep--;
+            registrationError = string.Empty;
+        }
+    }
+
+    private void NextStep()
+    {
+        registrationError = string.Empty;
+
+        if (registrationStep == 2)
+        {
+            // Validate step 2
+            if (customerCheckResult?.Exists == true)
+            {
+                // Customer exists - must select or add vehicle
+                if (selectedVehicleId == null && string.IsNullOrWhiteSpace(vehicleModel?.PlateNumber))
+                {
+                    registrationError = "Please select or add a vehicle";
+                    return;
+                }
+
+                if (selectedVehicleId == null)
+                {
+                    // Adding new vehicle
+                    // validate vehicle model
+                    if (vehicleEditContext == null || !vehicleEditContext.Validate())
+                    {
+                        registrationError = "Please check plate number";
+                        return;
+                    }
+                    // set normalized plate into working field
+                    newVehiclePlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                    if (string.IsNullOrWhiteSpace(newVehicleType))
+                    {
+                        registrationError = "Please select vehicle type";
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                // New customer - validate all
+                if (string.IsNullOrWhiteSpace(newCustomerName))
+                {
+                    registrationError = "Please enter customer name";
+                    return;
+                }
+                // validate vehicle model for new customer
+                if (vehicleEditContext == null || !vehicleEditContext.Validate())
+                {
+                    registrationError = "Please check plate number";
+                    return;
+                }
+                newVehiclePlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                if (string.IsNullOrWhiteSpace(newVehicleType))
+                {
+                    registrationError = "Please select vehicle type";
+                    return;
+                }
+            }
+
+            // Move to step 3 (Confirmation)
+            registrationStep = 3;
+        }
+    }
+
+    private void ShowCheckoutScreen()
+    {
+        showCheckoutConfirmation = true;
+        registrationError = string.Empty;
+    }
+
+    private void BackToSlotInfo()
+    {
+        showCheckoutConfirmation = false;
+        registrationError = string.Empty;
+    }
+
+    private async Task SubmitRegistration()
+    {
+        if (selectedSlot == null) return;
+
+        try
+        {
+            isSubmitting = true;
+            registrationError = string.Empty;
+
+            var request = new StaffRegisterParkingRequest
+            {
+                SlotId = selectedSlot.SlotId,
+                StaffId = currentStaffId,
+                CustomerPhone = phoneNumber
+            };
+
+            if (customerCheckResult?.Exists == true)
+            {
+                // Existing customer
+                request.CustomerId = customerCheckResult.CustomerId;
+
+                if (selectedVehicleId.HasValue)
+                {
+                    // Existing vehicle
+                    request.VehicleId = selectedVehicleId.Value;
+                }
+                else
+                {
+                    // Add vehicle for existing customer
+                    if (vehicleEditContext != null && !vehicleEditContext.Validate())
+                    {
+                        registrationError = "Invalid plate number";
+                        return;
+                    }
+                    request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                    request.VehicleType = newVehicleType;
+                }
+            }
+            else
+            {
+                // New customer
+                request.CustomerName = newCustomerName.Trim();
+                request.CustomerEmail = string.IsNullOrWhiteSpace(newCustomerEmail) ? null : newCustomerEmail.Trim();
+                if (vehicleEditContext != null && !vehicleEditContext.Validate())
+                {
+                    registrationError = "Invalid plate number";
+                    return;
+                }
+                request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                request.VehicleType = newVehicleType;
+            }
+
+            var response = await SlotService.StaffRegisterParking(request);
+
+            if (response.Success)
+            {
+                await ShowToast($"Successfully registered spot {selectedSlot.SlotCode}!");
+                CloseModal();
+                await RefreshSlots();
+            }
+            else
+            {
+                registrationError = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            registrationError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleCheckOut()
+    {
+        if (selectedSlot?.CurrentRegistrationId == null)
+        {
+            await ShowToast("No registration information found", false);
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to check out vehicle {selectedSlot.VehiclePlateNumber}?");
+
+        if (!confirmed) return;
+
+        try
+        {
+            isSubmitting = true;
+
+            var request = new CheckOutRequest
+            {
+                RegistrationId = selectedSlot.CurrentRegistrationId.Value,
+                PaymentAmount = 50000,
+                PaymentMethod = "Cash"
+            };
+
+            var response = await SlotService.CheckOutAsync(request);
+
+            if (response.Success)
+            {
+                var duration = response.Duration.HasValue 
+                    ? $"{response.Duration.Value.Hours}h {response.Duration.Value.Minutes}m" 
+                    : "N/A";
+                await ShowToast($"Check out successful! Duration: {duration}");
+                CloseModal();
+                await RefreshSlots();
+            }
+            else
+            {
+                await ShowToast(response.Message ?? "Check out failed", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowToast($"Error: {ex.Message}", false);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    // ============ CONFIRMATION HELPERS ============
+
+    private string GetConfirmationCustomerName()
+    {
+        if (customerCheckResult?.Exists == true)
+            return customerCheckResult.FullName ?? "";
+        return newCustomerName;
+    }
+
+    private string? GetConfirmationEmail()
+    {
+        if (customerCheckResult?.Exists == true)
+            return customerCheckResult.Email;
+        return string.IsNullOrWhiteSpace(newCustomerEmail) ? null : newCustomerEmail;
+    }
+
+    private string GetConfirmationPlateNumber()
+    {
+        if (selectedVehicleId.HasValue && customerCheckResult?.Vehicles != null)
+        {
+            var vehicle = customerCheckResult.Vehicles.FirstOrDefault(v => v.VehicleId == selectedVehicleId.Value);
+            return vehicle?.PlateNumber ?? "";
+        }
+        return string.IsNullOrWhiteSpace(newVehiclePlateNumber) ? vehicleModel?.PlateNumber ?? "" : newVehiclePlateNumber;
+    }
+
+    private string GetConfirmationVehicleType()
+    {
+        if (selectedVehicleId.HasValue && customerCheckResult?.Vehicles != null)
+        {
+            var vehicle = customerCheckResult.Vehicles.FirstOrDefault(v => v.VehicleId == selectedVehicleId.Value);
+            return vehicle?.VehicleType ?? "";
+        }
+        return newVehicleType;
+    }
+
+    private async Task ShowToast(string message, bool success = true)
+    {
+        // try
+        // {
+        //     await JSRuntime.InvokeVoidAsync("eval", 
+        //         $@"
+        //             const toast = document.getElementById('successToast');
+        //             const toastMsg = document.getElementById('toastMessage');
+        //             if (toast && toastMsg) {{
+        //                 toastMsg.textContent = '{message}';
+        //                 toast.classList.remove('bg-success', 'bg-danger');
+        //                 toast.classList.add('{(success ? "bg-success" : "bg-danger")}');
+        //                 const bsToast = new bootstrap.Toast(toast);
+        //                 bsToast.show();
+        //             }}
+        //         ");
+        // }
+        // catch { }
+    }
+
+    public void Dispose()
+    {
+        SlotService.OnSlotUpdated -= HandleSlotUpdated;
+        SlotService.OnParkingRegistered -= HandleParkingRegistered;
+        SlotService.OnSlotCheckedOut -= HandleSlotCheckedOut;
+    }
+
+    // Vehicle input model for validation
+    private VehicleInputModel vehicleModel = new VehicleInputModel();
+    private EditContext? vehicleEditContext;
+
+    private string NormalizePlate(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        var s = input!.Trim().ToUpperInvariant();
+        // remove spaces and dots, normalize single dash
+        s = s.Replace(" ", "").Replace(".", "");
+        return s;
+    }
+
+    public class VehicleInputModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Please enter plate number")] 
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{2,3}[A-Za-z]{1,2}[-\s]?[0-9]{3,5}(?:[.\s]?[0-9]{2})?$", ErrorMessage = "Invalid plate number. E.g.: 29A-12345 or 30A-123.45")]
+        [System.ComponentModel.DataAnnotations.StringLength(15, ErrorMessage = "Plate number too long")]
+        public string PlateNumber { get; set; } = string.Empty;
+    }
+}

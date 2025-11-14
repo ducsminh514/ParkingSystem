@@ -1,31 +1,30 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ParkingSystem.Server.Models;
-
 namespace ParkingSystem.Server.Hubs
 {
     public partial class ParkingHub 
     {
 
-        // Đăng ký Customer
+        // Register Customer
         public async Task<AuthResult> RegisterCustomer(RegisterRequest request)
         {
             try
             {
-                // Kiểm tra trùng
+                // Check for duplicate phone number
                 var exists = await _context.Customers
-                    .AnyAsync(c => c.Phone == request.Phone || c.Email == request.Email);
+                    .AnyAsync(c => c.Phone == request.Phone );
 
                 if (exists)
                 {
                     return new AuthResult
                     {
                         Success = false,
-                        Message = "Số điện thoại hoặc email đã tồn tại!"
+                        Message = "Phone number already exists!"
                     };
                 }
 
-                // Tạo customer mới
+                // Create new customer
                 var customer = new Customer
                 {
                     CustomerId = Guid.NewGuid(),
@@ -41,7 +40,7 @@ namespace ParkingSystem.Server.Hubs
                 return new AuthResult
                 {
                     Success = true,
-                    Message = "Đăng ký thành công!",
+                    Message = "Registration successful!",
                     UserInfo = new UserInfo
                     {
                         UserId = customer.CustomerId,
@@ -55,77 +54,97 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error registering customer");
-                return new AuthResult { Success = false, Message = "Lỗi hệ thống!" };
+                return new AuthResult { Success = false, Message = "System error!" };
             }
         }
 
-        // Đăng nhập
+        // Login
         public async Task<AuthResult> Login(LoginRequest request)
         {
             try
             {
-                if (request.IsStaff)
-                {
-                    // Login Staff
-                    var staff = await _context.Staff
-                        .FirstOrDefaultAsync(s => s.Username == request.UsernameOrEmail);
 
-                    if (staff == null || !BCrypt.Net.BCrypt.Verify(request.Password, staff.PasswordHash))
+            if (request.UsernameOrEmail == "admin" &&
+                request.Password == "admin123")
+            {
+                return new AuthResult
+                {
+                    Success = true,
+                    UserInfo = new UserInfo
                     {
+                        UserId = Guid.Empty, // Or a specific admin GUID
+                        FullName = "System Admin",
+                        Email = "admin@parking.com",
+                        UserType = "Admin"
+                    }
+                };
+             }
+            else
+                {
+                    if (request.IsStaff)
+                    {
+                        // Login Staff
+                        var staff = await _context.Staff
+                            .FirstOrDefaultAsync(s => s.Username == request.UsernameOrEmail);
+
+                        if (staff == null || !BCrypt.Net.BCrypt.Verify(request.Password, staff.PasswordHash))
+                        {
+                            return new AuthResult
+                            {
+                                Success = false,
+                                Message = "Invalid username or password!"
+                            };
+                        }
+
                         return new AuthResult
                         {
-                            Success = false,
-                            Message = "Tên đăng nhập hoặc mật khẩu không đúng!"
+                            Success = true,
+                            Message = "Login successful!",
+                            UserInfo = new UserInfo
+                            {
+                                UserId = staff.StaffId,
+                                FullName = staff.FullName,
+                                UserType = "Staff"
+                            }
                         };
                     }
-
-                    return new AuthResult
+                    else
                     {
-                        Success = true,
-                        Message = "Đăng nhập thành công!",
-                        UserInfo = new UserInfo
+                        // Login Customer
+                        var customer = await _context.Customers
+                            .FirstOrDefaultAsync(c => c.Email == request.UsernameOrEmail ||
+                                                      c.Phone == request.UsernameOrEmail);
+
+                        if (customer == null || !BCrypt.Net.BCrypt.Verify(request.Password, customer.PasswordHash))
                         {
-                            UserId = staff.StaffId,
-                            FullName = staff.FullName,
-                            UserType = "Staff"
+                            return new AuthResult
+                            {
+                                Success = false,
+                                Message = "Incorrect email/phone or password!"
+                            };
                         }
-                    };
-                }
-                else
-                {
-                    // Login Customer
-                    var customer = await _context.Customers
-                        .FirstOrDefaultAsync(c => c.Email == request.UsernameOrEmail ||
-                                                  c.Phone == request.UsernameOrEmail);
 
-                    if (customer == null || !BCrypt.Net.BCrypt.Verify(request.Password, customer.PasswordHash))
-                    {
                         return new AuthResult
                         {
-                            Success = false,
-                            Message = "Email/SĐT hoặc mật khẩu không đúng!"
+                            Success = true,
+                            Message = "Login successful!",
+                            UserInfo = new UserInfo
+                            {
+                                UserId = customer.CustomerId,
+                                FullName = customer.FullName,
+                                UserType = "Customer",
+                                Email = customer.Email,
+                                Phone = customer.Phone
+                            }
                         };
                     }
-
-                    return new AuthResult
-                    {
-                        Success = true,
-                        Message = "Đăng nhập thành công!",
-                        UserInfo = new UserInfo
-                        {
-                            UserId = customer.CustomerId,
-                            FullName = customer.FullName,
-                            UserType = "Customer",
-                            Email = customer.Email,
-                            Phone = customer.Phone
-                        }
-                    };
-                }
+                } 
+              
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login");
-                return new AuthResult { Success = false, Message = "Lỗi hệ thống!" };
+                return new AuthResult { Success = false, Message = "System error!" };
             }
         }
 
@@ -135,7 +154,9 @@ namespace ParkingSystem.Server.Hubs
             try
             {
                 var customers = await _context.Customers
+                    .Where(c => !c.IsDeleted) // Only get non-deleted customers
                     .Include(c => c.Vehicles)
+                    .ThenInclude(v => v.ParkingRegistrations)
                     .OrderBy(c => c.FullName)
                     .ToListAsync();
 
@@ -144,7 +165,7 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all customers");
-                throw new HubException("Không thể lấy danh sách khách hàng");
+                throw new HubException("Unable to retrieve customer list");
             }
         }
 
@@ -152,11 +173,12 @@ namespace ParkingSystem.Server.Hubs
         public async Task<Customer> GetCustomerById(Guid customerId)
         {
             var customer = await _context.Customers
+                .Where(c => !c.IsDeleted) // Only get non-deleted customers
                 .Include(c => c.Vehicles)
                 .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
             if (customer == null)
-                throw new HubException("Không tìm thấy khách hàng");
+                throw new HubException("Customer not found");
 
             return customer;
         }
@@ -165,6 +187,7 @@ namespace ParkingSystem.Server.Hubs
         public async Task<Customer> AddCustomer(Customer customer)
         {
             customer.CustomerId = Guid.NewGuid();
+            customer.PasswordHash = BCrypt.Net.BCrypt.HashPassword(customer.PasswordHash);
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
@@ -177,7 +200,7 @@ namespace ParkingSystem.Server.Hubs
         {
             var existing = await _context.Customers.FindAsync(customer.CustomerId);
             if (existing == null)
-                throw new HubException("Không tìm thấy khách hàng");
+                throw new HubException("Customer not found");
 
             existing.FullName = customer.FullName;
             existing.Phone = customer.Phone;
@@ -195,9 +218,20 @@ namespace ParkingSystem.Server.Hubs
         {
             var customer = await _context.Customers.FindAsync(customerId);
             if (customer == null)
-                throw new HubException("Không tìm thấy khách hàng");
+                throw new HubException("Customer not found");
+            
+            var hasActiveParking = await _context.Vehicles
+                .Where(v => v.CustomerId == customerId)
+                .SelectMany(v => v.ParkingRegistrations)
+                .AnyAsync(pr => pr.Status == "Active" && pr.CheckOutTime == null);
 
-            _context.Customers.Remove(customer);
+            if (hasActiveParking)
+            {
+                throw new HubException("Cannot delete customer with vehicles currently parked!");
+            }
+
+            customer.IsDeleted = true; // Mark as deleted
+            _context.Customers.Update(customer); // Update status
             await _context.SaveChangesAsync();
 
             await Clients.All.SendAsync("CustomerDeleted", customerId);
@@ -210,9 +244,9 @@ namespace ParkingSystem.Server.Hubs
                 return await GetAllCustomers();
 
             return await _context.Customers
-                .Where(c => c.FullName.Contains(keyword)
+                .Where(c=> !c.IsDeleted && (c.FullName.Contains(keyword)
                          || c.Phone.Contains(keyword)
-                         || c.Email.Contains(keyword))
+                         || c.Email.Contains(keyword)))
                 .Include(c => c.Vehicles)
                 .ToListAsync();
         }
@@ -221,8 +255,8 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
-                // CÁCH 1: Gộp chung 1 chain Include
                 var customer = await _context.Customers
+                    .Where(c => !c.IsDeleted && c.CustomerId == customerId) // Only get non-deleted customers
                     .Include(c => c.Vehicles)
                     .ThenInclude(v => v.ParkingRegistrations.OrderByDescending(pr => pr.CheckInTime))
                     .ThenInclude(pr => pr.Slot)
@@ -230,18 +264,18 @@ namespace ParkingSystem.Server.Hubs
                     .ThenInclude(v => v.ParkingRegistrations)
                     .ThenInclude(pr => pr.Payments)
                     .AsNoTracking()
-                    .AsSplitQuery() // QUAN TRỌNG: Tránh cartesian explosion
-                    .FirstOrDefaultAsync(c => c.CustomerId == customerId);
+                    .AsSplitQuery()
+                    .FirstOrDefaultAsync();
 
                 return customer;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error getting customer details {customerId}");
-                throw new HubException("Không thể lấy thông tin chi tiết khách hàng");
+                throw new HubException("Unable to retrieve customer details");
             }
         }
-        // Lấy tất cả xe của customer
+        // Get all vehicles for a customer
         public async Task<List<ParkingSystem.Server.Models.Vehicle>> GetMyVehicles(Guid customerId)
         {
             try
@@ -257,22 +291,22 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting vehicles for customer {CustomerId}", customerId);
-                throw new HubException("Không thể lấy danh sách xe");
+                throw new HubException("Unable to retrieve vehicle list");
             }
         }
 
-        // Thêm xe mới
+        // Add new vehicle
         public async Task<ParkingSystem.Server.Models.Vehicle> AddVehicle(Guid customerId, string plateNumber, string vehicleType)
         {
             try
             {
-                // Kiểm tra biển số đã tồn tại chưa
+                // Check if plate number already exists
                 var exists = await _context.Vehicles
                     .AnyAsync(v => v.PlateNumber == plateNumber);
 
                 if (exists)
                 {
-                    throw new HubException("Biển số xe này đã tồn tại trong hệ thống!");
+                    throw new HubException("This license plate is already registered in the system!");
                 }
 
                 var vehicle = new ParkingSystem.Server.Models.Vehicle
@@ -288,7 +322,7 @@ namespace ParkingSystem.Server.Hubs
 
                 _logger.LogInformation("Vehicle {PlateNumber} added for customer {CustomerId}", plateNumber, customerId);
 
-                // Gửi thông báo real-time
+                // Send real-time notification
                 await Clients.User(customerId.ToString()).SendAsync("VehicleAdded", vehicle);
 
                 return vehicle;
@@ -296,11 +330,11 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding vehicle");
-                throw new HubException(ex.Message.Contains("đã tồn tại") ? ex.Message : "Không thể thêm xe");
+                throw new HubException(ex.Message.Contains("already registered") || ex.Message.Contains("tồn tại") ? ex.Message : "Unable to add vehicle");
             }
         }
 
-        // Cập nhật xe
+        // Update vehicle
         public async Task<ParkingSystem.Server.Models.Vehicle> UpdateVehicle(Guid vehicleId, string plateNumber, string vehicleType)
         {
             try
@@ -309,16 +343,16 @@ namespace ParkingSystem.Server.Hubs
 
                 if (vehicle == null)
                 {
-                    throw new HubException("Không tìm thấy xe");
+                    throw new HubException("Vehicle not found");
                 }
 
-                // Kiểm tra biển số mới có trùng với xe khác không
+                // Check if the new plate number already exists for other vehicle
                 var duplicate = await _context.Vehicles
                     .AnyAsync(v => v.PlateNumber == plateNumber && v.VehicleId != vehicleId);
 
                 if (duplicate)
                 {
-                    throw new HubException("Biển số xe này đã tồn tại!");
+                    throw new HubException("This license plate already exists!");
                 }
 
                 vehicle.PlateNumber = plateNumber;
@@ -328,7 +362,7 @@ namespace ParkingSystem.Server.Hubs
 
                 _logger.LogInformation("Vehicle {VehicleId} updated", vehicleId);
 
-                // Gửi thông báo real-time
+                // Send real-time notification
                 await Clients.User(vehicle.CustomerId.ToString()).SendAsync("VehicleUpdated", vehicle);
 
                 return vehicle;
@@ -336,11 +370,11 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating vehicle");
-                throw new HubException(ex.Message.Contains("tồn tại") ? ex.Message : "Không thể cập nhật xe");
+                throw new HubException(ex.Message.Contains("exists") || ex.Message.Contains("tồn tại") ? ex.Message : "Unable to update vehicle");
             }
         }
 
-        // Xóa xe
+        // Delete vehicle
         public async Task DeleteVehicle(Guid vehicleId)
         {
             try
@@ -351,16 +385,16 @@ namespace ParkingSystem.Server.Hubs
 
                 if (vehicle == null)
                 {
-                    throw new HubException("Không tìm thấy xe");
+                    throw new HubException("Vehicle not found");
                 }
 
-                // Kiểm tra xe có đang đỗ không
+                // Check if vehicle is currently parked
                 var hasActiveParking = vehicle.ParkingRegistrations
                     .Any(pr => pr.Status == "InUse" && pr.CheckOutTime == null);
 
                 if (hasActiveParking)
                 {
-                    throw new HubException("Không thể xóa xe đang đỗ trong bãi!");
+                    throw new HubException("Cannot delete vehicle while it is still parked!");
                 }
 
                 _context.Vehicles.Remove(vehicle);
@@ -368,17 +402,17 @@ namespace ParkingSystem.Server.Hubs
 
                 _logger.LogInformation("Vehicle {VehicleId} deleted", vehicleId);
 
-                // Gửi thông báo real-time
+                // Send real-time notification
                 await Clients.User(vehicle.CustomerId.ToString()).SendAsync("VehicleDeleted", vehicleId);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting vehicle");
-                throw new HubException(ex.Message.Contains("đang đỗ") ? ex.Message : "Không thể xóa xe");
+                throw new HubException(ex.Message.Contains("still parked") || ex.Message.Contains("đang đỗ") ? ex.Message : "Unable to delete vehicle");
             }
         }
 
-        // Lấy chi tiết xe với lịch sử đỗ
+        // Get vehicle details with parking history
         public async Task<ParkingSystem.Server.Models.Vehicle?> GetVehicleDetails(Guid vehicleId)
         {
             try
@@ -396,7 +430,59 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting vehicle details");
-                throw new HubException("Không thể lấy thông tin xe");
+                throw new HubException("Unable to retrieve vehicle information");
+            }
+        }
+
+        // Change password
+        public async Task ChangePassword(Guid customerId, ChangePasswordModel model)
+        {
+            try
+            {
+                // Validate input
+                if (string.IsNullOrEmpty(model.CurrentPassword) || 
+                    string.IsNullOrEmpty(model.NewPassword) || 
+                    string.IsNullOrEmpty(model.ConfirmPassword))
+                {
+                    throw new HubException("Please fill in all required information");
+                }
+
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    throw new HubException("Confirmation password does not match");
+                }
+
+                if (model.NewPassword.Length < 6)
+                {
+                    throw new HubException("New password must be at least 6 characters long");
+                }
+
+                // Get customer
+                var customer = await _context.Customers.FindAsync(customerId);
+                if (customer == null)
+                {
+                    throw new HubException("Customer information not found");
+                }
+
+                // Verify current password
+                if (!BCrypt.Net.BCrypt.Verify(model.CurrentPassword, customer.PasswordHash))
+                {
+                    throw new HubException("Current password is incorrect");
+                }
+
+                // Update password
+                customer.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+                _context.Customers.Update(customer);
+                await _context.SaveChangesAsync();
+            }
+            catch (HubException)
+            {
+                throw; // Re-throw HubException as is
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password for customer {CustomerId}", customerId);
+                throw new HubException("An error occurred while changing the password. Please try again later.");
             }
         }
     }

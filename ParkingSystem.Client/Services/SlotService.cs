@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
-using ParkingSystem.Shared.Models;
-using ParkingSystem.Shared.DTOs;
 using Microsoft.Extensions.Logging;
+using ParkingSystem.Shared.DTOs;
+using ParkingSystem.Shared.Models;
 
 namespace ParkingSystem.Client.Services
 {
@@ -15,14 +15,19 @@ namespace ParkingSystem.Client.Services
         public event Action<ParkingSlotDto>? OnSlotUpdated;
         public event Action<RegisterParkingResponse>? OnParkingRegistered;
         public event Action<Guid>? OnSlotCheckedOut;
-
+        public event Action<Guid, ParkingHistoryDto>? OnNewCheckIn;
+        public event Action<Guid, Guid>? OnCheckOut;
+        public event Action<SlotManagementDto>? OnSlotCreated;
+        public event Action<List<SlotManagementDto>>? OnSlotsBulkCreated;
+        public event Action<SlotManagementDto>? OnAdminSlotUpdated;
+        public event Action<Guid>? OnSlotDeleted;
         public bool IsConnected => Connection?.State == HubConnectionState.Connected;
 
         public SlotService(ISignalRConnectionService signalRConnectionService, ILogger<SlotService> logger)
         {
             _signalRConnectionService = signalRConnectionService;
             _logger = logger;
-            
+
             // Register real-time event listeners
             RegisterEventHandlers();
         }
@@ -50,6 +55,45 @@ namespace ParkingSystem.Client.Services
                 _logger.LogInformation($"[Real-time] Slot checked out: {slotId}");
                 OnSlotCheckedOut?.Invoke(slotId);
             });
+
+            Connection.On<Guid, ParkingHistoryDto>("OnNewCheckIn", (customerId, history) =>
+            {
+                Console.WriteLine($"[SignalR Event] New check-in for customer {customerId}");
+                OnNewCheckIn?.Invoke(customerId, history);
+            });
+
+            // Listen to check-out
+            Connection.On<Guid, Guid>("OnCheckOut", (customerId, registrationId) =>
+            {
+                Console.WriteLine($"[SignalR Event] Check-out for registration {registrationId}");
+                OnCheckOut?.Invoke(customerId, registrationId);
+            });
+            Connection.On<SlotManagementDto>("OnSlotCreated", (newSlot) =>
+            {
+                _logger.LogInformation($"[Real-time] Slot created: {newSlot.SlotCode}");
+                OnSlotCreated?.Invoke(newSlot);
+            });
+
+            // Listen to bulk slot creation
+            Connection.On<List<SlotManagementDto>>("OnSlotsBulkCreated", (newSlots) =>
+            {
+                _logger.LogInformation($"[Real-time] {newSlots.Count} slots bulk created.");
+                OnSlotsBulkCreated?.Invoke(newSlots);
+            });
+
+            // Listen to admin slot updates
+            Connection.On<SlotManagementDto>("OnAdminSlotUpdated", (updatedSlot) =>
+            {
+                _logger.LogInformation($"[Real-time] Admin slot updated: {updatedSlot.SlotCode}");
+                OnAdminSlotUpdated?.Invoke(updatedSlot);
+            });
+
+            // Listen to slot deletion
+            Connection.On<Guid>("OnSlotDeleted", (slotId) =>
+            {
+                _logger.LogInformation($"[Real-time] Slot deleted: {slotId}");
+                OnSlotDeleted?.Invoke(slotId);
+            });
         }
 
         // ============ HELPER METHODS ============
@@ -58,8 +102,8 @@ namespace ParkingSystem.Client.Services
         {
             if (Connection?.State != HubConnectionState.Connected)
             {
-                _logger.LogError("SignalR chưa kết nối. State: {State}", Connection?.State);
-                throw new InvalidOperationException($"SignalR chưa kết nối. Trạng thái hiện tại: {Connection?.State}. Vui lòng kiểm tra kết nối server và thử lại.");
+                _logger.LogError("SignalR not connected. State: {State}", Connection?.State);
+                throw new InvalidOperationException($"SignalR not connected. Current state: {Connection?.State}. Please check server connection and try again.");
             }
         }
 
@@ -82,6 +126,178 @@ namespace ParkingSystem.Client.Services
             }
         }
 
+
+        // ============ ADMIN SLOT MANAGEMENT ============
+
+        /// <summary>
+        /// Get slots grouped by area - Admin only
+        /// </summary>
+        public async Task<List<ParkingAreaGroupDto>> GetSlotsGroupedByArea()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<List<ParkingAreaGroupDto>>("GetSlotsGroupedByArea");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting slots grouped by area");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get slots statistics - Admin only
+        /// </summary>
+        public async Task<SlotsStatisticsDto> GetSlotsStatistics()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotsStatisticsDto>("GetSlotsStatistics");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting slots statistics");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create new slot - Admin only
+        /// </summary>
+        public async Task<SlotOperationResponse> CreateSlot(CreateSlotRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotOperationResponse>("CreateSlot", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating slot");
+                return new SlotOperationResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Bulk create slots - Admin only
+        /// </summary>
+        public async Task<SlotOperationResponse> BulkCreateSlots(BulkCreateSlotsRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotOperationResponse>("BulkCreateSlots", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error bulk creating slots");
+                return new SlotOperationResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Update slot - Admin only
+        /// </summary>
+        public async Task<SlotOperationResponse> UpdateSlot(UpdateSlotRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotOperationResponse>("UpdateSlot", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating slot");
+                return new SlotOperationResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Delete slot - Admin only
+        /// </summary>
+        public async Task<DeleteSlotResponse> DeleteSlot(Guid slotId, bool forceDelete = false)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<DeleteSlotResponse>("DeleteSlot", slotId, forceDelete);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting slot");
+                return new DeleteSlotResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Bulk delete slots - Admin only
+        /// </summary>
+        public async Task<DeleteSlotResponse> BulkDeleteSlots(BulkDeleteSlotsRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<DeleteSlotResponse>("BulkDeleteSlots", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error bulk deleting slots");
+                return new DeleteSlotResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ParkingHistoryResponse> GetMyHistoryAsync(Guid customerId)
+        {
+            try
+            {
+                EnsureConnected();
+
+                Console.WriteLine($"[GetMyHistoryAsync] Requesting history for customer {customerId}");
+
+                var response = await Connection.InvokeAsync<ParkingHistoryResponse>(
+                    "GetCustomerParkingHistory",
+                    customerId
+                );
+
+                Console.WriteLine($"[GetMyHistoryAsync] Received {response.TotalRecords} records");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetMyHistoryAsync Error] {ex.Message}");
+                return new ParkingHistoryResponse
+                {
+                    Success = false,
+                    Message = $"Error loading history: {ex.Message}",
+                    Histories = new List<ParkingHistoryDto>(),
+                    TotalRecords = 0,
+                    ActiveParking = 0
+                };
+            }
+        }
         // ============ PARKING SLOT OPERATIONS (STAFF) ============
 
         public async Task<List<ParkingSlotDto>> GetAllSlotsAsync()
@@ -99,7 +315,7 @@ namespace ParkingSystem.Client.Services
         }
 
         /// <summary>
-        /// Lấy slots theo khu vực cho STAFF - Có đầy đủ thông tin cá nhân
+        /// Get slots by area for STAFF - with full customer details
         /// </summary>
         public async Task<List<ParkingAreaDto>> GetSlotsByAreaAsync()
         {
@@ -132,7 +348,7 @@ namespace ParkingSystem.Client.Services
         // ============ PARKING SLOT OPERATIONS (CUSTOMER - Privacy Protected) ============
 
         /// <summary>
-        /// Lấy slots theo khu vực cho CUSTOMER - Hiển thị thông tin chi tiết CHỈ cho slot của chính customer đó
+        /// Get slots by area for CUSTOMER - show details ONLY for the customer's slots
         /// </summary>
         public async Task<List<CustomerParkingAreaDto>> GetSlotsByAreaForCustomerAsync(Guid customerId)
         {
@@ -190,6 +406,124 @@ namespace ParkingSystem.Client.Services
             }
         }
 
+        // ============ NEW: Get Active Registrations ============
+
+        /// <summary>
+        /// Get the list of actively parked vehicles of a customer
+        /// </summary>
+        //public async Task<List<ActiveRegistrationDto>> GetMyActiveRegistrations(Guid customerId)
+        //{
+        //    EnsureConnected();
+        //    try
+        //    {
+        //        return await Connection.InvokeAsync<List<ActiveRegistrationDto>>("GetMyActiveRegistrations", customerId);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error getting active registrations");
+        //        throw;
+        //    }
+        //}
+
+        // ============ STAFF REGISTRATION WORKFLOW ============
+
+        /// <summary>
+        /// Check customer by phone number (Staff)
+        /// </summary>
+        public async Task<CustomerCheckResult> CheckCustomerByPhone(string phoneNumber)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CustomerCheckResult>("CheckCustomerByPhone", phoneNumber);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking customer by phone");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Staff registers parking (can create new customer/vehicle)
+        /// </summary>
+        public async Task<RegisterParkingResponse> StaffRegisterParking(StaffRegisterParkingRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<RegisterParkingResponse>("StaffRegisterParking", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in staff registration");
+                return new RegisterParkingResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+        /// <summary>
+        /// Get parking prices
+        /// </summary>
+        public async Task<List<ParkingPriceDto>> GetParkingPrices()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<List<ParkingPriceDto>>("GetParkingPrices");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting parking prices");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Calculate parking fee prior to check-out
+        /// </summary>
+        public async Task<CalculateFeeResponse> CalculateParkingFee(Guid registrationId)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CalculateFeeResponse>("CalculateParkingFee", registrationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating fee");
+                return new CalculateFeeResponse
+                {
+                    Success = false,
+                    Message = $"Fee calculation error: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Check-out with payment
+        /// </summary>
+        public async Task<CheckOutWithPaymentResponse> CheckOutWithPayment(CheckOutWithPaymentRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<CheckOutWithPaymentResponse>("CheckOutWithPayment", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in check-out with payment");
+                return new CheckOutWithPaymentResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
+                };
+            }
+        }
+
+
         // ============ PARKING REGISTRATION OPERATIONS ============
 
         public async Task<RegisterParkingResponse> RegisterParkingAsync(RegisterParkingRequest request)
@@ -197,15 +531,15 @@ namespace ParkingSystem.Client.Services
             EnsureConnected();
             try
             {
-                return await Connection.InvokeAsync<RegisterParkingResponse>("RegisterParking", request);
+                return await Connection.InvokeAsync<RegisterParkingResponse>("RegisterParkingCustomer", request);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error registering parking");
-                return new RegisterParkingResponse 
-                { 
-                    Success = false, 
-                    Message = $"Lỗi kết nối: {ex.Message}" 
+                return new RegisterParkingResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -220,10 +554,10 @@ namespace ParkingSystem.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking out");
-                return new CheckOutResponse 
-                { 
-                    Success = false, 
-                    Message = $"Lỗi kết nối: {ex.Message}" 
+                return new CheckOutResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }

@@ -1,0 +1,425 @@
+﻿@page "/parking-history"
+@using ParkingSystem.Shared.DTOs
+@using ParkingSystem.Client.Services
+@inject SlotService HistoryService  
+@inject UserService UserService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Parking Registration History</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h3><i class="bi bi-clock-history"></i> Parking Registration History</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary" @onclick="RefreshHistory">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Records</h6>
+                            <h3 class="mb-0">@totalRecords</h3>
+                        </div>
+                        <i class="bi bi-list-check" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Actively Parked</h6>
+                            <h3 class="mb-0">@activeParking</h3>
+                        </div>
+                        <i class="bi bi-car-front-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Completed</h6>
+                            <h3 class="mb-0">@completedRecords</h3>
+                        </div>
+                        <i class="bi bi-check-circle-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" @bind="StatusFilter">
+                        <option value="All">All</option>
+                        <option value="Active">Active</option>
+                        <option value="CheckedOut">Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" placeholder="License plate or slot code..." @bind="searchText" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" @onclick="ApplyFilter">
+                        <i class="bi bi-funnel"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading history...</p>
+        </div>
+    }
+    else if (filteredHistories.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">
+                @if (string.IsNullOrEmpty(searchText) && statusFilter == "All")
+                {
+                    <span>You don't have any registration history yet</span>
+                }
+                else
+                {
+                    <span>No matching results found</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <!-- History List -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>License Plate</th>
+                                <th>Vehicle Type</th>
+                                <th>Slot Code</th>
+                                <th>Check-in Time</th>
+                                <th>Check-out Time</th>
+                                <th>Duration</th>
+                                <th>Staff</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var history in filteredHistories)
+                            {
+                                <tr class="@(history.IsActive ? "table-success" : "")">
+                                    <td>
+                                        <strong>
+                                            <i class="bi bi-credit-card-2-front text-primary"></i>
+                                            @history.PlateNumber
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-car-front"></i>
+                                        @history.VehicleType
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">@history.SlotCode</span>
+                                    </td>
+                                    <td>
+                                        <small>@history.CheckInTime.ToString("dd/MM/yyyy HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        @if (history.CheckOutTime.HasValue)
+                                        {
+                                            <small>@history.CheckOutTime.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@history.Duration</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(history.StaffName))
+                                        {
+                                            <small>
+                                                <i class="bi bi-person-badge"></i>
+                                                @history.StaffName
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@history.StatusColor">
+                                            @history.StatusText
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    h3 {
+        font-weight: 700;
+        color: #1F2937;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    h3 i {
+        background: linear-gradient(135deg, #4F46E5, #7C3AED);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        margin-bottom: 1.5rem;
+    }
+
+    .card.bg-primary,
+    .card.bg-success,
+    .card.bg-info {
+        animation: fadeInUp 0.6s ease-in-out;
+        transition: all 0.3s ease;
+    }
+
+    .card.bg-primary:hover,
+    .card.bg-success:hover,
+    .card.bg-info:hover {
+        transform: translateY(-5px) scale(1.02);
+    }
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: #6B7280;
+        border-bottom: 2px solid #E5E7EB;
+    }
+
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #F9FAFB;
+        transform: translateX(5px);
+    }
+
+    .table tbody tr.table-success {
+        background-color: #D1FAE5;
+    }
+
+    .table tbody tr.table-success:hover {
+        background-color: #A7F3D0;
+    }
+
+    .badge {
+        font-weight: 600;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .btn {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:active {
+        transform: scale(0.97);
+    }
+</style>
+
+@code {
+    private List<ParkingHistoryDto> histories = new();
+    private List<ParkingHistoryDto> filteredHistories = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private Guid currentCustomerId;
+
+    // Statistics
+    private int totalRecords = 0;
+    private int activeParking = 0;
+    private int completedRecords = 0;
+
+    // Filter
+    private string statusFilter = "All";
+    private string searchText = string.Empty;
+
+    private string StatusFilter
+    {
+        get => statusFilter;
+        set
+        {
+            if (statusFilter != value)
+            {
+                statusFilter = value;
+                ApplyFilter();
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentCustomerId = await UserService.GetCurrentUserId();
+
+        // Subscribe to real-time events
+        HistoryService.OnNewCheckIn += HandleNewCheckIn;
+        HistoryService.OnCheckOut += HandleCheckOut;
+
+        await LoadHistory();
+    }
+
+    private async Task LoadHistory()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var response = await HistoryService.GetMyHistoryAsync(currentCustomerId);
+
+            if (response.Success)
+            {
+                histories = response.Histories;
+                totalRecords = response.TotalRecords;
+                activeParking = response.ActiveParking;
+                completedRecords = totalRecords - activeParking;
+
+                ApplyFilter();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Cannot load history: {ex.Message}";
+            Console.WriteLine($"[LoadHistory Error] {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        filteredHistories = histories
+            .Where(h =>
+            {
+                // Status filter
+                if (statusFilter != "All" && h.Status != statusFilter)
+                    return false;
+
+                // Search filter
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    var search = searchText.ToLower();
+                    return h.PlateNumber.ToLower().Contains(search) ||
+                           h.SlotCode.ToLower().Contains(search);
+                }
+
+                return true;
+            })
+            .ToList();
+
+        StateHasChanged();
+    }
+
+    private async Task RefreshHistory()
+    {
+        await LoadHistory();
+    }
+
+    private async void HandleNewCheckIn(Guid customerId, ParkingHistoryDto newHistory)
+    {
+        if (customerId == currentCustomerId)
+        {
+            await InvokeAsync(() =>
+            {
+                Console.WriteLine($"[UI] New check-in: {newHistory.PlateNumber}");
+                histories.Insert(0, newHistory);
+                totalRecords++;
+                activeParking++;
+                ApplyFilter();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async void HandleCheckOut(Guid customerId, Guid registrationId)
+    {
+        if (customerId == currentCustomerId)
+        {
+            await InvokeAsync(() =>
+            {
+                Console.WriteLine($"[UI] Check-out: {registrationId}");
+                var history = histories.FirstOrDefault(h => h.RegistrationID == registrationId);
+                if (history != null)
+                {
+                    history.Status = "CheckedOut";
+                    history.CheckOutTime = DateTime.Now;
+                    activeParking--;
+                    completedRecords++;
+                    ApplyFilter();
+                    StateHasChanged();
+                }
+            });
+        }
+    }
+
+    public void Dispose()
+    {
+        HistoryService.OnNewCheckIn -= HandleNewCheckIn;
+        HistoryService.OnCheckOut -= HandleCheckOut;
+    }
+}
