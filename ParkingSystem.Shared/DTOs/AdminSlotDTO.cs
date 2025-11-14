@@ -44,7 +44,6 @@ namespace ParkingSystem.Shared.DTOs
             "Available" => "Sẵn sàng",
             "InUse" => "Đang sử dụng",
             "Maintenance" => "Bảo trì",
-            "Reserved" => "Đặt trước",
             _ => Status
         };
     }

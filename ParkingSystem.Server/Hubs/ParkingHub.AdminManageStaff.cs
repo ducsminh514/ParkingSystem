@@ -36,7 +36,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffListResponse
                 {
                     Success = true,
-                    Message = "Lấy danh sách staff thành công",
+                    Message = "Get all staffs successfully",
                     Staffs = staffs,
                     TotalCount = staffs.Count
                 };
@@ -47,7 +47,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffListResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}",
+                    Message = $"Error: {ex.Message}",
                     Staffs = new List<StaffDto>(),
                     TotalCount = 0
                 };
@@ -67,7 +67,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập họ tên"
+                        Message = "Please enter full name"
                     };
                 }
 
@@ -76,7 +76,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập tên đăng nhập"
+                        Message = "Please enter username"
                     };
                 }
 
@@ -85,7 +85,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập mật khẩu"
+                        Message = "Please enter password"
                     };
                 }
 
@@ -98,7 +98,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Tên đăng nhập đã tồn tại"
+                        Message = "Username already exists"
                     };
                 }
 
@@ -134,7 +134,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffOperationResponse
                 {
                     Success = true,
-                    Message = "Tạo nhân viên thành công",
+                    Message = "Create staff successfully",
                     Staff = staffDto
                 };
             }
@@ -144,7 +144,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    Message = $"Error: {ex.Message}"
                 };
             }
         }
@@ -164,7 +164,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy nhân viên"
+                        Message = "Staff not found"
                     };
                 }
 
@@ -198,7 +198,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffOperationResponse
                 {
                     Success = true,
-                    Message = "Cập nhật thành công",
+                    Message = "Update staff successfully",
                     Staff = staffDto
                 };
             }
@@ -208,7 +208,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    Message = $"Error: {ex.Message}"
                 };
             }
         }
@@ -228,7 +228,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy nhân viên"
+                        Message = "Staff not found"
                     };
                 }
 
@@ -241,7 +241,7 @@ namespace ParkingSystem.Server.Hubs
                     return new StaffOperationResponse
                     {
                         Success = false,
-                        Message = "Không thể xóa nhân viên đã có lịch sử đăng ký. Vui lòng vô hiệu hóa thay vì xóa."
+                        Message = "Cannot delete staff with registration history. Please deactivate instead of deleting."
                     };
                 }
 
@@ -254,7 +254,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffOperationResponse
                 {
                     Success = true,
-                    Message = "Xóa nhân viên thành công"
+                    Message = "Delete staff successfully"
                 };
             }
             catch (Exception ex)
@@ -263,7 +263,7 @@ namespace ParkingSystem.Server.Hubs
                 return new StaffOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    Message = $"Error: {ex.Message}"
                 };
             }
         }

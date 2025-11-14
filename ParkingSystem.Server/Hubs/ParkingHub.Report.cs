@@ -59,6 +59,7 @@ namespace ParkingSystem.Server.Hubs
                 _context.CustomerReports.Add(report);
                 await _context.SaveChangesAsync();
 
+                // Load related data
                 var createdReport = await _context.CustomerReports
                     .Include(r => r.Customer)
                     .Include(r => r.Category)

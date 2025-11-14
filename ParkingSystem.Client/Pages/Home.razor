@@ -1,6 +1,6 @@
 @page "/"
 
-<PageTitle>Parking System - Hệ thống đỗ xe thông minh</PageTitle>
+<PageTitle>Parking System - Smart Parking System</PageTitle>
 
 <style>
     .hero-section {
@@ -128,14 +128,14 @@
 
 <AuthorizeView>
     <Authorized>
-        @* Hero Section - Đã đăng nhập *@
+        @* Hero Section - Logged In *@
         <div class="hero-section">
             <div class="hero-content container text-center">
                 <div class="welcome-badge">
-                    <i class="bi bi-stars"></i> Chào mừng trở lại
+                    <i class="bi bi-stars"></i> Welcome back
                 </div>
                 <h1 class="display-4 fw-bold mb-3">
-                    Xin chào, @context.User.Identity?.Name!
+                    Hello, @context.User.Identity?.Name!
                 </h1>
                 <p class="lead mb-4">
                     <span class="badge bg-light text-dark fs-6">
@@ -143,32 +143,32 @@
                         @(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User")
                     </span>
                 </p>
-                <p class="fs-5">Bạn muốn làm gì hôm nay?</p>
+                <p class="fs-5">What would you like to do today?</p>
             </div>
         </div>
 
         <div class="container">
-            @* Action Cards dựa theo Role *@
+            @* Action Cards based on Role *@
             @if (context.User.IsInRole("Customer"))
             {
                 <div class="row g-4 mb-5">
                     <div class="col-md-3">
                         <div class="action-card">
                             <i class="bi bi-car-front-fill action-icon text-primary float-animation"></i>
-                            <h4 class="fw-bold mb-3">Quản lý xe</h4>
-                            <p class="text-muted mb-4">Xem và quản lý danh sách xe của bạn</p>
+                            <h4 class="fw-bold mb-3">Manage Vehicles</h4>
+                            <p class="text-muted mb-4">View and manage your vehicle list</p>
                             <a href="/my-vehicles" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Đi đến
+                                <i class="bi bi-arrow-right-circle"></i> Go
                             </a>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="action-card">
                             <i class="bi bi-calendar-check-fill action-icon text-success float-animation" style="animation-delay: 0.2s;"></i>
-                            <h4 class="fw-bold mb-3">Đặt chỗ đỗ</h4>
-                            <p class="text-muted mb-4">Đặt trước chỗ đỗ xe của bạn</p>
+                            <h4 class="fw-bold mb-3">Book a Slot</h4>
+                            <p class="text-muted mb-4">Reserve your parking slot in advance</p>
                             <a href="/slots" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Đặt ngay
+                                <i class="bi bi-arrow-right-circle"></i> Book Now
                             </a>
                         </div>
                     </div>
@@ -176,10 +176,10 @@
                     <div class="col-md-3">
                         <div class="action-card">
                             <i class="bi bi-clock-history action-icon text-info float-animation" style="animation-delay: 0.4s;"></i>
-                            <h4 class="fw-bold mb-3">Lịch sử</h4>
-                            <p class="text-muted mb-4">Xem lịch sử đỗ xe của bạn</p>
+                            <h4 class="fw-bold mb-3">History</h4>
+                            <p class="text-muted mb-4">View your parking history</p>
                             <a href="/parking-history" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Xem ngay
+                                <i class="bi bi-arrow-right-circle"></i> View
                             </a>
                         </div>
                     </div>
@@ -187,9 +187,9 @@
                         <div class="action-card">
                             <i class="bi bi-clock-history action-icon text-info float-animation" style="animation-delay: 0.4s;"></i>
                             <h4 class="fw-bold mb-3">Report</h4>
-                            <p class="text-muted mb-4">Xem lịch sử report của bạn  </p>
+                            <p class="text-muted mb-4">View your report history</p>
                             <a href="/reports" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Xem ngay
+                                <i class="bi bi-arrow-right-circle"></i> View
                             </a>
                         </div>
                     </div>
@@ -203,28 +203,28 @@
                         <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             <i class="bi bi-people-fill" style="font-size: 2.5rem;"></i>
                             <div class="stats-number">128</div>
-                            <div>Khách hàng</div>
+                            <div>Customers</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                             <i class="bi bi-car-front-fill" style="font-size: 2.5rem;"></i>
                             <div class="stats-number">45</div>
-                            <div>Xe đang đỗ</div>
+                            <div>Parked Cars</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                             <i class="bi bi-grid-3x3-gap-fill" style="font-size: 2.5rem;"></i>
                             <div class="stats-number">15</div>
-                            <div>Chỗ trống</div>
+                            <div>Available Slots</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
                             <i class="bi bi-cash-coin" style="font-size: 2.5rem;"></i>
                             <div class="stats-number">24M</div>
-                            <div>Doanh thu</div>
+                            <div>Revenue</div>
                         </div>
                     </div>
                 </div>
@@ -233,30 +233,30 @@
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-people-fill action-icon text-primary"></i>
-                            <h4 class="fw-bold mb-3">Quản lý khách hàng</h4>
-                            <p class="text-muted mb-4">Xem và quản lý thông tin khách hàng</p>
+                            <h4 class="fw-bold mb-3">Manage Customers</h4>
+                            <p class="text-muted mb-4">View and manage customer information</p>
                             <a href="/customers" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Quản lý
+                                <i class="bi bi-arrow-right-circle"></i> Manage
                             </a>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-grid-3x3-gap-fill action-icon text-success"></i>
-                            <h4 class="fw-bold mb-3">Quản lý chỗ đỗ</h4>
-                            <p class="text-muted mb-4">Theo dõi và quản lý chỗ đỗ xe</p>
+                            <h4 class="fw-bold mb-3">Manage Slots</h4>
+                            <p class="text-muted mb-4">Monitor and manage parking slots</p>
                             <a href="/staff/slots" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Quản lý
+                                <i class="bi bi-arrow-right-circle"></i> Manage
                             </a>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-graph-up action-icon text-info"></i>
-                            <h4 class="fw-bold mb-3">Báo cáo thống kê</h4>
-                            <p class="text-muted mb-4">Xem báo cáo và thống kê hệ thống</p>
+                            <h4 class="fw-bold mb-3">Statistics Report</h4>
+                            <p class="text-muted mb-4">View system reports and statistics</p>
                             <a href="/staff/reports" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Xem báo cáo
+                                <i class="bi bi-arrow-right-circle"></i> View Reports
                             </a>
                         </div>
                     </div>
@@ -267,50 +267,50 @@
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-people-fill action-icon text-primary"></i>
-                            <h4 class="fw-bold mb-3">Quản lý khách hàng </h4>
-                            <p class="text-muted mb-4">Xem và quản lý thông tin khách hàng</p>
+                            <h4 class="fw-bold mb-3">Manage Customers</h4>
+                            <p class="text-muted mb-4">View and manage customer information</p>
                             <a href="/customers" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Quản lý
+                                <i class="bi bi-arrow-right-circle"></i> Manage
                             </a>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-graph-up action-icon text-info"></i>
-                            <h4 class="fw-bold mb-3">Báo cáo Report</h4>
-                            <p class="text-muted mb-4">Xem báo cáo </p>
+                            <h4 class="fw-bold mb-3">Reports</h4>
+                            <p class="text-muted mb-4">View reports</p>
                             <a href="/admin/reports" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Xem báo cáo
+                                <i class="bi bi-arrow-right-circle"></i> View Reports
                             </a>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-graph-up action-icon text-info"></i>
-                            <h4 class="fw-bold mb-3">Quản lí giá</h4>
-                            <p class="text-muted mb-4">Quản lí giá </p>
+                            <h4 class="fw-bold mb-3">Manage Pricing</h4>
+                            <p class="text-muted mb-4">Manage pricing</p>
                             <a href="/admin/pricing" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Quản lí giá
+                                <i class="bi bi-arrow-right-circle"></i> Manage Pricing
                             </a>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-graph-up action-icon text-info"></i>
-                            <h4 class="fw-bold mb-3">Quản lí Staff</h4>
-                            <p class="text-muted mb-4">Staff </p>
+                            <h4 class="fw-bold mb-3">Manage Staff</h4>
+                            <p class="text-muted mb-4">Staff</p>
                             <a href="/admin/staff" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Quản lí Staff
+                                <i class="bi bi-arrow-right-circle"></i> Manage Staff
                             </a>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="action-card">
                             <i class="bi bi-graph-up action-icon text-info"></i>
-                            <h4 class="fw-bold mb-3">Quản lí Slot</h4>
-                            <p class="text-muted mb-4">Slot </p>
+                            <h4 class="fw-bold mb-3">Manage Slots</h4>
+                            <p class="text-muted mb-4">Slot</p>
                             <a href="/admin/slots" class="btn btn-gradient">
-                                <i class="bi bi-arrow-right-circle"></i> Quản lí Slot
+                                <i class="bi bi-arrow-right-circle"></i> Manage Slots
                             </a>
                         </div>
                     </div>
@@ -320,24 +320,24 @@
     </Authorized>
 
     <NotAuthorized>
-        @* Hero Section - Chưa đăng nhập *@
+        @* Hero Section - Not Logged In *@
         <div class="hero-section">
             <div class="hero-content container text-center">
                 <div class="mb-4">
                     <i class="bi bi-p-square-fill" style="font-size: 5rem;"></i>
                 </div>
                 <h1 class="display-3 fw-bold mb-4">
-                    Hệ thống đỗ xe thông minh
+                    Smart Parking System
                 </h1>
                 <p class="lead mb-5 fs-4">
-                    Giải pháp quản lý bãi đỗ xe hiện đại, nhanh chóng và an toàn
+                    A modern, fast and secure parking management solution
                 </p>
                 <div class="d-flex gap-3 justify-content-center">
                     <a href="/register" class="btn btn-light btn-lg px-5 py-3">
-                        <i class="bi bi-person-plus-fill"></i> Đăng ký ngay
+                        <i class="bi bi-person-plus-fill"></i> Register Now
                     </a>
                     <a href="/login" class="btn btn-outline-light btn-lg px-5 py-3">
-                        <i class="bi bi-box-arrow-in-right"></i> Đăng nhập
+                        <i class="bi bi-box-arrow-in-right"></i> Log In
                     </a>
                 </div>
             </div>
@@ -351,9 +351,9 @@
                         <div class="feature-icon">
                             <i class="bi bi-lightning-charge-fill"></i>
                         </div>
-                        <h4 class="fw-bold mb-3">Nhanh chóng</h4>
+                        <h4 class="fw-bold mb-3">Fast</h4>
                         <p class="text-muted">
-                            Đặt chỗ đỗ xe chỉ trong vài giây. Tiết kiệm thời gian tìm chỗ đỗ
+                            Reserve a parking slot in seconds. Save time searching for a spot.
                         </p>
                     </div>
                 </div>
@@ -362,9 +362,9 @@
                         <div class="feature-icon">
                             <i class="bi bi-shield-check"></i>
                         </div>
-                        <h4 class="fw-bold mb-3">An toàn</h4>
+                        <h4 class="fw-bold mb-3">Secure</h4>
                         <p class="text-muted">
-                            Bảo mật thông tin tuyệt đối. Camera giám sát 24/7
+                            Absolute data protection. 24/7 camera monitoring.
                         </p>
                     </div>
                 </div>
@@ -373,9 +373,9 @@
                         <div class="feature-icon">
                             <i class="bi bi-cash-coin"></i>
                         </div>
-                        <h4 class="fw-bold mb-3">Tiết kiệm</h4>
+                        <h4 class="fw-bold mb-3">Affordable</h4>
                         <p class="text-muted">
-                            Giá cả hợp lý, nhiều chương trình ưu đãi hấp dẫn
+                            Reasonable pricing, many attractive promotions.
                         </p>
                     </div>
                 </div>
@@ -383,10 +383,10 @@
 
             @* CTA Section *@
             <div class="text-center py-5 mb-5" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 20px;">
-                <h2 class="fw-bold mb-4">Sẵn sàng bắt đầu?</h2>
-                <p class="text-muted mb-4 fs-5">Tham gia cùng hàng nghìn người dùng đã tin tưởng</p>
+                <h2 class="fw-bold mb-4">Ready to get started?</h2>
+                <p class="text-muted mb-4 fs-5">Join thousands of trusted users</p>
                 <a href="/register" class="btn btn-gradient btn-lg px-5">
-                    <i class="bi bi-rocket-takeoff"></i> Đăng ký miễn phí
+                    <i class="bi bi-rocket-takeoff"></i> Register Free
                 </a>
             </div>
         </div>

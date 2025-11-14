@@ -30,11 +30,11 @@ public class ParkingSlotDto
             {
                 var duration = DateTime.Now - CheckInTime.Value;
                 if (duration.TotalDays >= 1)
-                    return $"{(int)duration.TotalDays} ngày {duration.Hours} giờ";
+                    return $"{(int)duration.TotalDays} days {duration.Hours} hours";
                 else if (duration.TotalHours >= 1)
-                    return $"{(int)duration.TotalHours} giờ {duration.Minutes} phút";
+                    return $"{(int)duration.TotalHours} hours {duration.Minutes} minutes";
                 else
-                    return $"{(int)duration.TotalMinutes} phút";
+                    return $"{(int)duration.TotalMinutes} minutes";
             }
             return null;
         }
@@ -61,7 +61,7 @@ public class ParkingHistoryDto
             {
                 var duration = CheckOutTime.Value - CheckInTime;
                 if (duration.TotalDays >= 1)
-                    return $"{(int)duration.TotalDays} ngày {duration.Hours}h {duration.Minutes}m";
+                    return $"{(int)duration.TotalDays} d {duration.Hours}h {duration.Minutes}m";
                 else if (duration.TotalHours >= 1)
                     return $"{(int)duration.TotalHours}h {duration.Minutes}m";
                 else
@@ -71,7 +71,7 @@ public class ParkingHistoryDto
             {
                 var duration = DateTime.Now - CheckInTime;
                 if (duration.TotalDays >= 1)
-                    return $"{(int)duration.TotalDays} ngày {duration.Hours}h {duration.Minutes}m";
+                    return $"{(int)duration.TotalDays} d {duration.Hours}h {duration.Minutes}m";
                 else if (duration.TotalHours >= 1)
                     return $"{(int)duration.TotalHours}h {duration.Minutes}m";
                 else
@@ -82,9 +82,9 @@ public class ParkingHistoryDto
 
     public string StatusText => Status switch
     {
-        "Active" => "Đang đỗ",
-        "CheckedOut" => "Đã hoàn thành",
-        _ => "Không xác định"
+        "Active" => "parking",
+        "CheckedOut" => "complete",
+        _ => "unknown"
     };
 
     public string StatusColor => Status switch
@@ -161,11 +161,11 @@ public class CustomerParkingSlotDto
             {
                 var duration = DateTime.Now - CheckInTime.Value;
                 if (duration.TotalDays >= 1)
-                    return $"{(int)duration.TotalDays} ngày {duration.Hours} giờ";
+                    return $"{(int)duration.TotalDays} days {duration.Hours} hours";
                 else if (duration.TotalHours >= 1)
-                    return $"{(int)duration.TotalHours} giờ {duration.Minutes} phút";
+                    return $"{(int)duration.TotalHours} days {duration.Minutes} minutes";
                 else
-                    return $"{(int)duration.TotalMinutes} phút";
+                    return $"{(int)duration.TotalMinutes} minutes";
             }
             return null;
         }

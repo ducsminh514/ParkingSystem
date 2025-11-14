@@ -269,7 +269,7 @@ namespace ParkingSystem.Server.Hubs
                     return new UpsertPriceResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập loại xe"
+                        Message = "Please enter vehicle type"
                     };
                 }
 
@@ -278,7 +278,7 @@ namespace ParkingSystem.Server.Hubs
                     return new UpsertPriceResponse
                     {
                         Success = false,
-                        Message = "Giá phải lớn hơn 0"
+                        Message = "Price must be greater than 0"
                     };
                 }
 
@@ -294,7 +294,7 @@ namespace ParkingSystem.Server.Hubs
                         return new UpsertPriceResponse
                         {
                             Success = false,
-                            Message = "Không tìm thấy giá cần cập nhật"
+                            Message = "Price not found"
                         };
                     }
 
@@ -309,7 +309,7 @@ namespace ParkingSystem.Server.Hubs
                             return new UpsertPriceResponse
                             {
                                 Success = false,
-                                Message = $"Loại xe '{request.VehicleType}' đã tồn tại"
+                                Message = $"Vehicle type '{request.VehicleType}' already exists"
                             };
                         }
                     }
@@ -333,7 +333,7 @@ namespace ParkingSystem.Server.Hubs
                         return new UpsertPriceResponse
                         {
                             Success = false,
-                            Message = $"Loại xe '{request.VehicleType}' đã tồn tại"
+                            Message = $"Vehicle type '{request.VehicleType}' already exists"
                         };
                     }
 
@@ -366,7 +366,7 @@ namespace ParkingSystem.Server.Hubs
                 return new UpsertPriceResponse
                 {
                     Success = true,
-                    Message = request.PriceId.HasValue ? "Cập nhật giá thành công" : "Thêm giá mới thành công",
+                    Message = request.PriceId.HasValue ? "Update price successfully" : "Add new price successfully",
                     Price = priceDto
                 };
             }
@@ -376,7 +376,7 @@ namespace ParkingSystem.Server.Hubs
                 return new UpsertPriceResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -397,7 +397,7 @@ namespace ParkingSystem.Server.Hubs
                     return new DeletePriceResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy giá cần xóa"
+                        Message = "Price not found"
                     };
                 }
 
@@ -415,7 +415,7 @@ namespace ParkingSystem.Server.Hubs
                 return new DeletePriceResponse
                 {
                     Success = true,
-                    Message = "Xóa giá thành công"
+                    Message = "Delete price successfully"
                 };
             }
             catch (Exception ex)
@@ -424,7 +424,7 @@ namespace ParkingSystem.Server.Hubs
                 return new DeletePriceResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -445,7 +445,7 @@ namespace ParkingSystem.Server.Hubs
                     return new UpsertPriceResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy giá"
+                        Message = "Price not found"
                     };
                 }
 
@@ -468,7 +468,7 @@ namespace ParkingSystem.Server.Hubs
                 return new UpsertPriceResponse
                 {
                     Success = true,
-                    Message = price.IsActive ? "Đã kích hoạt giá" : "Đã tắt giá",
+                    Message = price.IsActive ? "Price activated" : "Price deactivated",
                     Price = priceDto
                 };
             }
@@ -478,7 +478,7 @@ namespace ParkingSystem.Server.Hubs
                 return new UpsertPriceResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }

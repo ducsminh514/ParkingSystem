@@ -102,8 +102,8 @@ namespace ParkingSystem.Client.Services
         {
             if (Connection?.State != HubConnectionState.Connected)
             {
-                _logger.LogError("SignalR chưa kết nối. State: {State}", Connection?.State);
-                throw new InvalidOperationException($"SignalR chưa kết nối. Trạng thái hiện tại: {Connection?.State}. Vui lòng kiểm tra kết nối server và thử lại.");
+                _logger.LogError("SignalR not connected. State: {State}", Connection?.State);
+                throw new InvalidOperationException($"SignalR not connected. Current state: {Connection?.State}. Please check server connection and try again.");
             }
         }
 
@@ -125,8 +125,8 @@ namespace ParkingSystem.Client.Services
                 return false;
             }
         }
-        
-        
+
+
         // ============ ADMIN SLOT MANAGEMENT ============
 
         /// <summary>
@@ -179,7 +179,7 @@ namespace ParkingSystem.Client.Services
                 return new SlotOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -200,7 +200,7 @@ namespace ParkingSystem.Client.Services
                 return new SlotOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -221,7 +221,7 @@ namespace ParkingSystem.Client.Services
                 return new SlotOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -242,7 +242,7 @@ namespace ParkingSystem.Client.Services
                 return new DeleteSlotResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -263,7 +263,7 @@ namespace ParkingSystem.Client.Services
                 return new DeleteSlotResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -291,7 +291,7 @@ namespace ParkingSystem.Client.Services
                 return new ParkingHistoryResponse
                 {
                     Success = false,
-                    Message = $"Lỗi khi tải lịch sử: {ex.Message}",
+                    Message = $"Error loading history: {ex.Message}",
                     Histories = new List<ParkingHistoryDto>(),
                     TotalRecords = 0,
                     ActiveParking = 0
@@ -457,10 +457,10 @@ namespace ParkingSystem.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in staff registration");
-                return new RegisterParkingResponse 
-                { 
-                    Success = false, 
-                    Message = $"Lỗi kết nối: {ex.Message}" 
+                return new RegisterParkingResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -497,7 +497,7 @@ namespace ParkingSystem.Client.Services
                 return new CalculateFeeResponse
                 {
                     Success = false,
-                    Message = $"Lỗi tính phí: {ex.Message}"
+                    Message = $"Fee calculation error: {ex.Message}"
                 };
             }
         }
@@ -518,7 +518,7 @@ namespace ParkingSystem.Client.Services
                 return new CheckOutWithPaymentResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -536,10 +536,10 @@ namespace ParkingSystem.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error registering parking");
-                return new RegisterParkingResponse 
-                { 
-                    Success = false, 
-                    Message = $"Lỗi kết nối: {ex.Message}" 
+                return new RegisterParkingResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -554,10 +554,10 @@ namespace ParkingSystem.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking out");
-                return new CheckOutResponse 
-                { 
-                    Success = false, 
-                    Message = $"Lỗi kết nối: {ex.Message}" 
+                return new CheckOutResponse
+                {
+                    Success = false,
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }

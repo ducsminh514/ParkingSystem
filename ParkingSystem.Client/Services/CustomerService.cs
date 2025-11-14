@@ -2,7 +2,7 @@ using System.Data.SqlTypes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using ParkingSystem.Shared.Models;
-
+using ParkingSystem.Shared.DTOs;
 namespace ParkingSystem.Client.Services
 {
     public class CustomerService 
@@ -19,8 +19,8 @@ namespace ParkingSystem.Client.Services
         public event Func<ParkingSystem.Shared.Models.Vehicle, Task>? OnVehicleAdded;
         public event Func<ParkingSystem.Shared.Models.Vehicle, Task>? OnVehicleUpdated;
         public event Func<Guid, Task>? OnVehicleDeleted;
-
         public bool IsConnected => HubConnection?.State == HubConnectionState.Connected;
+        public event Func<ParkingPriceDto,Task>? OnVehicleTypesChanged;
 
         public CustomerService(ISignalRConnectionService connectionService, ILogger<CustomerService> logger)
         {
@@ -37,7 +37,13 @@ namespace ParkingSystem.Client.Services
                     if (OnCustomerAdded != null)
                         await OnCustomerAdded.Invoke(customer);
                 });
-
+                HubConnection.On<ParkingPriceDto>("OnPriceUpdated", async (parkingPriceDto) => 
+                {
+                    if (OnVehicleTypesChanged != null)
+                    {
+                        await OnVehicleTypesChanged.Invoke(parkingPriceDto);
+                    }
+                });
                 HubConnection.On<Customer>("CustomerUpdated", async (customer) =>
                 {
                     _logger.LogInformation($"Real-time: Customer updated - {customer.FullName}");
@@ -202,7 +208,7 @@ namespace ParkingSystem.Client.Services
         {
             if (HubConnection?.State != HubConnectionState.Connected)
             {
-                throw new InvalidOperationException("SignalR chưa kết nối. Vui lòng thử lại.");
+                throw new InvalidOperationException("SignalR is not connected. Please try again.");
             }
         }
         
@@ -324,7 +330,7 @@ namespace ParkingSystem.Client.Services
             {
                 HubConnection.On<dynamic>("ReceiveNotification", async (notification) =>
                 {
-                    string title = notification.GetProperty("Title").GetString() ?? "Thông báo";
+                    string title = notification.GetProperty("Title").GetString() ?? "Notification";
                     string message = notification.GetProperty("Message").GetString() ?? "";
                     string type = notification.GetProperty("Type").GetString() ?? "info";
 
@@ -333,6 +339,20 @@ namespace ParkingSystem.Client.Services
                         await _notificationHandler.Invoke(title, message, type);
                     }
                 });
+            }
+        }
+
+        public async Task<List<string>> GetActiveVehicleTypes()
+        {
+            EnsureConnected();
+            try
+            {
+                return await HubConnection!.InvokeAsync<List<string>>("GetActiveVehicleTypes");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active vehicle types");
+                return new List<string>();
             }
         }
         

@@ -10,10 +10,10 @@ public partial class Vehicle
     public Guid VehicleId { get; set; }
 
 
-    [Required(ErrorMessage = "Biển số xe là bắt buộc.")]
+    [Required(ErrorMessage = "Plate number is required.")]
     [RegularExpression(@"^\d{2}[A-Za-z]{1,2}[-\s]?(?:\d{5}|\d{3}(?:[.\s]?\d{2}))$",
-        ErrorMessage = "Biển số không hợp lệ. Ví dụ hợp lệ: `30A-12345`, `30A-123.45`")]
-    [StringLength(15, ErrorMessage = "Biển số quá dài.")]
+        ErrorMessage = "Invalid plate number. Valid examples: `30A-12345`, `30A-123.45`")]
+    [StringLength(15, ErrorMessage = "Plate number is too long.")]
     public string PlateNumber { get; set; } = null!;
 
     public string? VehicleType { get; set; }

@@ -21,7 +21,7 @@ namespace ParkingSystem.Server.Hubs
                     return new AuthResult
                     {
                         Success = false,
-                        Message = "Số điện thoại đã tồn tại!"
+                        Message = "Phone number already exists!"
                     };
                 }
 
@@ -41,7 +41,7 @@ namespace ParkingSystem.Server.Hubs
                 return new AuthResult
                 {
                     Success = true,
-                    Message = "Đăng ký thành công!",
+                    Message = "Registration successful!",
                     UserInfo = new UserInfo
                     {
                         UserId = customer.CustomerId,
@@ -55,11 +55,11 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error registering customer");
-                return new AuthResult { Success = false, Message = "Lỗi hệ thống!" };
+                return new AuthResult { Success = false, Message = "System error!" };
             }
         }
 
-        // Đăng nhập
+        // Login
         public async Task<AuthResult> Login(LoginRequest request)
         {
             try
@@ -93,14 +93,14 @@ namespace ParkingSystem.Server.Hubs
                             return new AuthResult
                             {
                                 Success = false,
-                                Message = "Tên đăng nhập hoặc mật khẩu không đúng!"
+                                Message = "Invalid username or password!"
                             };
                         }
 
                         return new AuthResult
                         {
                             Success = true,
-                            Message = "Đăng nhập thành công!",
+                            Message = "Login successful!",
                             UserInfo = new UserInfo
                             {
                                 UserId = staff.StaffId,
@@ -121,14 +121,14 @@ namespace ParkingSystem.Server.Hubs
                             return new AuthResult
                             {
                                 Success = false,
-                                Message = "Email/SĐT hoặc mật khẩu không đúng!"
+                                Message = "Incorrect email/phone or password!"
                             };
                         }
 
                         return new AuthResult
                         {
                             Success = true,
-                            Message = "Đăng nhập thành công!",
+                            Message = "Login successful!",
                             UserInfo = new UserInfo
                             {
                                 UserId = customer.CustomerId,
@@ -145,7 +145,7 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login");
-                return new AuthResult { Success = false, Message = "Lỗi hệ thống!" };
+                return new AuthResult { Success = false, Message = "System error!" };
             }
         }
 
@@ -206,13 +206,13 @@ namespace ParkingSystem.Server.Hubs
             existing.FullName = customer.FullName;
             existing.Phone = customer.Phone;
             existing.Email = customer.Email;
-            existing.PasswordHash = customer.PasswordHash;
 
             await _context.SaveChangesAsync();
             await Clients.All.SendAsync("CustomerUpdated", existing);
 
             return existing;
         }
+
 
         // ============ DELETE CUSTOMER ============
         public async Task DeleteCustomer(Guid customerId)
@@ -238,6 +238,7 @@ namespace ParkingSystem.Server.Hubs
             await Clients.All.SendAsync("CustomerDeleted", customerId);
         }
 
+
         // ============ SEARCH ============
         public async Task<List<Customer>> SearchCustomers(string keyword)
         {
@@ -251,6 +252,7 @@ namespace ParkingSystem.Server.Hubs
                 .Include(c => c.Vehicles)
                 .ToListAsync();
         }
+
 
         public async Task<Customer?> GetCustomerWithFullDetails(Guid customerId)
         {
@@ -276,6 +278,7 @@ namespace ParkingSystem.Server.Hubs
                 throw new HubException("Không thể lấy thông tin chi tiết khách hàng");
             }
         }
+
         // Lấy tất cả xe của customer
         public async Task<List<ParkingSystem.Server.Models.Vehicle>> GetMyVehicles(Guid customerId)
         {
@@ -295,6 +298,25 @@ namespace ParkingSystem.Server.Hubs
                 throw new HubException("Không thể lấy danh sách xe");
             }
         }
+
+        public async Task<List<string>> GetActiveVehicleTypes()
+        {
+            try
+            {
+                return await _context.ParkingPrices
+                    .Where(p => p.IsActive)
+                    .OrderBy(p => p.VehicleType)
+                    .Select(p => p.VehicleType)
+                    .Distinct()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active vehicle types");
+                throw new HubException("Error getting active vehicle types");
+            }
+        }
+
 
         // Thêm xe mới
         public async Task<ParkingSystem.Server.Models.Vehicle> AddVehicle(Guid customerId, string plateNumber, string vehicleType)
