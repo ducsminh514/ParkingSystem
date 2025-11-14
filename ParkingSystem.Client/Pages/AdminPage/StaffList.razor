@@ -5,19 +5,19 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<PageTitle>Quản Lý Nhân Viên</PageTitle>
+<PageTitle>Staff Management</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col">
-            <h3><i class="bi bi-people-fill"></i> Quản Lý Nhân Viên</h3>
+            <h3><i class="bi bi-people-fill"></i> Staff Management</h3>
         </div>
         <div class="col-auto">
             <button class="btn btn-success" @onclick="OpenCreateModal">
-                <i class="bi bi-plus-circle"></i> Thêm Nhân Viên
+                <i class="bi bi-plus-circle"></i> Add Staff
             </button>
             <button class="btn btn-outline-primary" @onclick="RefreshList">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
+                <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>
         </div>
     </div>
@@ -37,7 +37,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title mb-0">Tổng Nhân Viên</h6>
+                            <h6 class="card-title mb-0">Total Staff</h6>
                             <h3 class="mb-0">@staffList.Count</h3>
                         </div>
                         <i class="bi bi-people" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -50,7 +50,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title mb-0">Đang Hoạt Động</h6>
+                            <h6 class="card-title mb-0">Active</h6>
                             <h3 class="mb-0">@staffList.Count(s => s.ActiveRegistrations > 0)</h3>
                         </div>
                         <i class="bi bi-person-check" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -63,7 +63,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title mb-0">Tổng Đăng Ký</h6>
+                            <h6 class="card-title mb-0">Total Registrations</h6>
                             <h3 class="mb-0">@staffList.Sum(s => s.TotalRegistrations)</h3>
                         </div>
                         <i class="bi bi-clipboard-check" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -77,18 +77,18 @@
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Đang tải...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Đang tải danh sách nhân viên...</p>
+            <p class="mt-2">Loading staff list...</p>
         </div>
     }
     else if (staffList.Count == 0)
     {
         <div class="text-center py-5">
             <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">Chưa có nhân viên nào trong hệ thống</p>
+            <p class="text-muted mt-3">No staff in the system yet</p>
             <button class="btn btn-primary mt-2" @onclick="OpenCreateModal">
-                <i class="bi bi-plus-circle"></i> Thêm nhân viên đầu tiên
+                <i class="bi bi-plus-circle"></i> Add the first staff
             </button>
         </div>
     }
@@ -101,12 +101,12 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Họ Tên</th>
-                                <th>Tên Đăng Nhập</th>
-                                <th>Ca Làm Việc</th>
-                                <th>Tổng Đăng Ký</th>
-                                <th>Đang Xử Lý</th>
-                                <th class="text-end">Thao Tác</th>
+                                <th>Full Name</th>
+                                <th>Username</th>
+                                <th>Shift</th>
+                                <th>Total Registrations</th>
+                                <th>Active</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -176,58 +176,58 @@
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">
                         <i class="bi bi-@(isEditMode ? "pencil" : "plus-circle")"></i>
-                        @(isEditMode ? "Sửa Thông Tin Nhân Viên" : "Thêm Nhân Viên Mới")
+                        @(isEditMode ? "Edit Staff" : "Add New Staff")
                     </h5>
                     <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-bold">
-                            Họ Tên <span class="text-danger">*</span>
+                            Full Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" @bind="formModel.FullName" placeholder="Nhập họ tên" />
+                        <input type="text" class="form-control" @bind="formModel.FullName" placeholder="Enter full name" />
                     </div>
 
                     @if (!isEditMode)
                     {
                         <div class="mb-3">
                             <label class="form-label fw-bold">
-                                Tên Đăng Nhập <span class="text-danger">*</span>
+                                Username <span class="text-danger">*</span>
                             </label>
-                            <input type="text" class="form-control" @bind="formModel.Username" placeholder="Nhập tên đăng nhập" />
-                            <small class="text-muted">Tên đăng nhập không thể thay đổi sau khi tạo</small>
+                            <input type="text" class="form-control" @bind="formModel.Username" placeholder="Enter username" />
+                            <small class="text-muted">Username cannot be changed after creation</small>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">
-                                Mật Khẩu <span class="text-danger">*</span>
+                                Password <span class="text-danger">*</span>
                             </label>
-                            <input type="password" class="form-control" @bind="formModel.Password" placeholder="Nhập mật khẩu" />
+                            <input type="password" class="form-control" @bind="formModel.Password" placeholder="Enter password" />
                         </div>
                     }
                     else
                     {
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Tên Đăng Nhập</label>
+                            <label class="form-label fw-bold">Username</label>
                             <input type="text" class="form-control" value="@formModel.Username" readonly />
-                            <small class="text-muted">Tên đăng nhập không thể thay đổi</small>
+                            <small class="text-muted">Username cannot be changed</small>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">
-                                Mật Khẩu Mới (để trống nếu không đổi)
+                                New Password (leave blank if unchanged)
                             </label>
-                            <input type="password" class="form-control" @bind="formModel.NewPassword" placeholder="Nhập mật khẩu mới" />
+                            <input type="password" class="form-control" @bind="formModel.NewPassword" placeholder="Enter new password" />
                         </div>
                     }
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Ca Làm Việc</label>
+                        <label class="form-label fw-bold">Shift</label>
                         <select class="form-select" @bind="formModel.Shift">
-                            <option value="">-- Chọn ca --</option>
-                            <option value="Sáng">Sáng (6h - 14h)</option>
-                            <option value="Chiều">Chiều (14h - 22h)</option>
-                            <option value="Tối">Tối (22h - 6h)</option>
+                            <option value="">-- Select shift --</option>
+                            <option value="Sáng">Morning (6am - 2pm)</option>
+                            <option value="Chiều">Afternoon (2pm - 10pm)</option>
+                            <option value="Tối">Night (10pm - 6am)</option>
                             <option value="Full-time">Full-time</option>
                         </select>
                     </div>
@@ -241,7 +241,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">
-                        <i class="bi bi-x-lg"></i> Hủy
+                        <i class="bi bi-x-lg"></i> Cancel
                     </button>
                     <button type="button" class="btn btn-primary" @onclick="SaveStaff" disabled="@isSubmitting">
                         @if (isSubmitting)
@@ -252,7 +252,7 @@
                         {
                             <i class="bi bi-@(isEditMode ? "save" : "plus-circle")"></i>
                         }
-                        @(isEditMode ? "Lưu" : "Tạo")
+                        @(isEditMode ? "Save" : "Create")
                     </button>
                 </div>
             </div>
@@ -364,7 +364,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Không thể tải danh sách: {ex.Message}";
+            errorMessage = $"Could not load staff list: {ex.Message}";
             Console.WriteLine($"[LoadStaffList Error] {ex}");
         }
         finally
@@ -418,7 +418,7 @@
             // Validate
             if (string.IsNullOrWhiteSpace(formModel.FullName))
             {
-                modalError = "Vui lòng nhập họ tên";
+                modalError = "Please enter full name";
                 return;
             }
 
@@ -427,19 +427,19 @@
                 // Create mode - validate all fields
                 if (string.IsNullOrWhiteSpace(formModel.Username))
                 {
-                    modalError = "Vui lòng nhập tên đăng nhập";
+                    modalError = "Please enter username";
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(formModel.Password))
                 {
-                    modalError = "Vui lòng nhập mật khẩu";
+                    modalError = "Please enter password";
                     return;
                 }
 
                 if (formModel.Password.Length < 6)
                 {
-                    modalError = "Mật khẩu phải có ít nhất 6 ký tự";
+                    modalError = "Password must be at least 6 characters";
                     return;
                 }
 
@@ -456,7 +456,7 @@
 
                 if (response.Success)
                 {
-                    await ShowToast($"✅ Tạo nhân viên {formModel.FullName} thành công!");
+                    await ShowToast($"✅ Created staff {formModel.FullName} successfully!");
                     CloseModal();
                     await RefreshList();
                 }
@@ -478,7 +478,7 @@
 
                 if (!string.IsNullOrWhiteSpace(formModel.NewPassword) && formModel.NewPassword.Length < 6)
                 {
-                    modalError = "Mật khẩu mới phải có ít nhất 6 ký tự";
+                    modalError = "New password must be at least 6 characters";
                     return;
                 }
 
@@ -486,7 +486,7 @@
 
                 if (response.Success)
                 {
-                    await ShowToast($"✅ Cập nhật thông tin {formModel.FullName} thành công!");
+                    await ShowToast($"✅ Updated information for {formModel.FullName} successfully!");
                     CloseModal();
                     await RefreshList();
                 }
@@ -498,7 +498,7 @@
         }
         catch (Exception ex)
         {
-            modalError = $"Lỗi: {ex.Message}";
+            modalError = $"Error: {ex.Message}";
             Console.WriteLine($"[SaveStaff Error] {ex}");
         }
         finally
@@ -510,10 +510,11 @@
     private async Task DeleteStaff(StaffDto staff)
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
-            $"Bạn có chắc muốn xóa nhân viên \"{staff.FullName}\"?\n" +
-            $"Tên đăng nhập: {staff.Username}\n" +
-            $"Tổng đăng ký: {staff.TotalRegistrations}\n\n" +
-            "Lưu ý: Không thể xóa nếu nhân viên đã có lịch sử đăng ký.");
+            $"Are you sure you want to delete staff \"{staff.FullName}\"?\n" +
+            $"Username: {staff.Username}\n" +
+            $"Total registrations: {staff.TotalRegistrations}\n\n" +
+            "Note: Deletion is not allowed if this staff already has registration history."
+        );
 
         if (!confirmed) return;
 
@@ -524,7 +525,7 @@
 
             if (response.Success)
             {
-                await ShowToast($"✅ Đã xóa nhân viên {staff.FullName}");
+                await ShowToast($"✅ Deleted staff {staff.FullName}");
                 await RefreshList();
             }
             else
@@ -534,7 +535,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi khi xóa: {ex.Message}";
+            errorMessage = $"Error deleting: {ex.Message}";
             Console.WriteLine($"[DeleteStaff Error] {ex}");
         }
     }

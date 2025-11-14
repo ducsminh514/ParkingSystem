@@ -24,7 +24,6 @@ namespace ParkingSystem.Client.Services
             RegisterEventHandlers();
         }
 
-
         private void RegisterEventHandlers()
         {
             Connection.On<ParkingPriceDto>("OnPriceUpdated", (price) =>
@@ -46,8 +45,8 @@ namespace ParkingSystem.Client.Services
         {
             if (Connection?.State != HubConnectionState.Connected)
             {
-                _logger.LogError("SignalR chưa kết nối. State: {State}", Connection?.State);
-                throw new InvalidOperationException($"SignalR chưa kết nối. Trạng thái hiện tại: {Connection?.State}. Vui lòng kiểm tra kết nối server và thử lại.");
+                _logger.LogError("SignalR not connected. State: {State}", Connection?.State);
+                throw new InvalidOperationException($"SignalR not connected. Current state: {Connection?.State}. Please check the server connection and try again.");
             }
         }
 
@@ -105,7 +104,7 @@ namespace ParkingSystem.Client.Services
                 return new UpsertPriceResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
@@ -126,13 +125,13 @@ namespace ParkingSystem.Client.Services
                 return new DeletePriceResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }
 
         /// <summary>
-        /// Toggle trạng thái active/inactive - Admin only
+        /// Toggle active/inactive status - Admin only
         /// </summary>
         public async Task<UpsertPriceResponse> TogglePriceStatus(Guid priceId)
         {
@@ -147,7 +146,7 @@ namespace ParkingSystem.Client.Services
                 return new UpsertPriceResponse
                 {
                     Success = false,
-                    Message = $"Lỗi kết nối: {ex.Message}"
+                    Message = $"Connection error: {ex.Message}"
                 };
             }
         }        

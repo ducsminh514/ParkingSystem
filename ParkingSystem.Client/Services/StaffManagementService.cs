@@ -92,7 +92,7 @@ namespace ParkingSystem.Client.Services
                 return new StaffListResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}",
+                    Message = $"Error: {ex.Message}",
                     Staffs = new List<StaffDto>(),
                     TotalCount = 0
                 };
@@ -122,7 +122,7 @@ namespace ParkingSystem.Client.Services
                 return new StaffOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    Message = $"Error: {ex.Message}"
                 };
             }
         }
@@ -150,7 +150,7 @@ namespace ParkingSystem.Client.Services
                 return new StaffOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    Message = $"Error: {ex.Message}"
                 };
             }
         }
@@ -178,7 +178,7 @@ namespace ParkingSystem.Client.Services
                 return new StaffOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    Message = $"Error: {ex.Message}"
                 };
             }
         }

@@ -35,7 +35,7 @@ namespace ParkingSystem.Server.Hubs
                 return new ParkingHistoryResponse
                 {
                     Success = true,
-                    Message = "Lấy lịch sử thành công",
+                    Message = "Successfully fetched parking history",
                     Histories = histories,
                     TotalRecords = histories.Count,
                     ActiveParking = activeCount
@@ -47,7 +47,7 @@ namespace ParkingSystem.Server.Hubs
                 return new ParkingHistoryResponse
                 {
                     Success = false,
-                    Message = $"Lỗi: {ex.Message}",
+                    Message = $"Error: {ex.Message}",
                     Histories = new List<ParkingHistoryDto>(),
                     TotalRecords = 0,
                     ActiveParking = 0
@@ -150,7 +150,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy chỗ đỗ"
+                        Message = "Slot not found"
                     };
                 }
 
@@ -159,13 +159,13 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Chỗ đỗ này đã được sử dụng"
+                        Message = "This slot is already in use"
                     };
                 }
 
                 // 2. Xử lý Customer
                 Customer customer;
-                
+
                 if (request.CustomerId.HasValue)
                 {
                     // Customer đã tồn tại
@@ -175,7 +175,7 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Không tìm thấy khách hàng"
+                            Message = "Customer not found"
                         };
                     }
                 }
@@ -187,20 +187,20 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Vui lòng nhập tên khách hàng"
+                            Message = "Please enter customer name"
                         };
                     }
 
                     // Kiểm tra số điện thoại đã tồn tại chưa
                     var existingCustomer = await _context.Customers
                         .FirstOrDefaultAsync(c => c.Phone == request.CustomerPhone);
-                    
+
                     if (existingCustomer != null)
                     {
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Số điện thoại này đã được đăng ký. Vui lòng kiểm tra lại."
+                            Message = "This phone number is already registered. Please check again."
                         };
                     }
 
@@ -212,7 +212,7 @@ namespace ParkingSystem.Server.Hubs
                         Email = request.CustomerEmail,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword($"customer_{request.CustomerPhone}") // Default password
                     };
-                    
+
                     _context.Customers.Add(customer);
                     _logger.LogInformation($"Created new customer: {customer.FullName} - {customer.Phone}");
                 }
@@ -229,7 +229,7 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Không tìm thấy xe"
+                            Message = "Vehicle not found"
                         };
                     }
 
@@ -245,7 +245,7 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = $"Xe {vehicle.PlateNumber} đang đỗ ở chỗ {existingActiveReg.Slot?.SlotCode}. Vui lòng check-out trước."
+                            Message = $"Vehicle {vehicle.PlateNumber} is parked at slot {existingActiveReg.Slot?.SlotCode}. Please check out first."
                         };
                     }
                 }
@@ -257,7 +257,7 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Vui lòng nhập biển số xe"
+                            Message = "Please enter vehicle plate number"
                         };
                     }
 
@@ -278,7 +278,7 @@ namespace ParkingSystem.Server.Hubs
                             return new RegisterParkingResponse
                             {
                                 Success = false,
-                                Message = $"Biển số {request.PlateNumber} đã được đăng ký bởi khách hàng khác"
+                                Message = $"Plate number {request.PlateNumber} has already been registered by another customer"
                             };
                         }
                     }
@@ -344,7 +344,7 @@ namespace ParkingSystem.Server.Hubs
                 var response = new RegisterParkingResponse
                 {
                     Success = true,
-                    Message = "Đăng ký chỗ đỗ thành công",
+                    Message = "Parking slot registered successfully",
                     RegistrationId = registration.RegistrationId,
                     CustomerId = customer.CustomerId,
                     VehicleId = vehicle.VehicleId,
@@ -365,7 +365,7 @@ namespace ParkingSystem.Server.Hubs
                 return new RegisterParkingResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -398,15 +398,15 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
-                _logger.LogInformation("Bắt đầu lấy slots theo khu vực...");
-                
-                // Kiểm tra kết nối database
+                _logger.LogInformation("Start fetching slots by area...");
+
+                // Check DB connection
                 var totalCount = await _context.ParkingSlots.CountAsync();
-                _logger.LogInformation($"Tổng số slots trong database: {totalCount}");
-                
+                _logger.LogInformation($"Total slots in database: {totalCount}");
+
                 if (totalCount == 0)
                 {
-                    _logger.LogWarning("Không có slots nào trong database!");
+                    _logger.LogWarning("No slots found in database!");
                     return new List<ParkingAreaDto>();
                 }
 
@@ -418,14 +418,14 @@ namespace ParkingSystem.Server.Hubs
                     .OrderBy(s => s.SlotCode)
                     .ToListAsync();
 
-                _logger.LogInformation($"Đã lấy được {allSlots.Count} slots từ database");
+                _logger.LogInformation($"Fetched {allSlots.Count} slots from database");
 
                 // Nhóm slots theo ký tự đầu tiên (Zone/Area)
                 var groupedSlots = allSlots
                     .GroupBy(s => s.SlotCode.Length > 0 ? s.SlotCode[0].ToString().ToUpper() : "Unknown")
                     .Select(g => new ParkingAreaDto
                     {
-                        AreaName = $"Khu {g.Key}",
+                        AreaName = $"Zone {g.Key}",
                         TotalSlots = g.Count(),
                         AvailableSlots = g.Count(s => s.Status == "Available"),
                         OccupiedSlots = g.Count(s => s.Status == "InUse" || s.Status == "Occupied"),
@@ -452,12 +452,12 @@ namespace ParkingSystem.Server.Hubs
                     .OrderBy(a => a.AreaName)
                     .ToList();
 
-                _logger.LogInformation($"Đã nhóm thành {groupedSlots.Count} khu vực");
+                _logger.LogInformation($"Grouped into {groupedSlots.Count} areas");
                 return groupedSlots;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy slots theo khu vực: {Message}", ex.Message);
+                _logger.LogError(ex, "Error getting slots by area: {Message}", ex.Message);
                 throw new HubException($"Error getting slots by area: {ex.Message}");
             }
         }
@@ -466,18 +466,18 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
-                _logger.LogInformation("Bắt đầu lấy tổng quan parking...");
-                
+                _logger.LogInformation("Start fetching parking overview...");
+
                 var totalSlots = await _context.ParkingSlots.CountAsync();
-                _logger.LogInformation($"Tổng số slots: {totalSlots}");
-                
+                _logger.LogInformation($"Total slots: {totalSlots}");
+
                 var availableSlots = await _context.ParkingSlots
                     .CountAsync(s => s.Status == "Available");
-                _logger.LogInformation($"Số slots trống: {availableSlots}");
-                
+                _logger.LogInformation($"Available slots: {availableSlots}");
+
                 var occupiedSlots = await _context.ParkingSlots
                     .CountAsync(s => s.Status == "InUse" || s.Status == "Occupied");
-                _logger.LogInformation($"Số slots đã sử dụng: {occupiedSlots}");
+                _logger.LogInformation($"Occupied slots: {occupiedSlots}");
 
                 var overview = new ParkingOverviewDto
                 {
@@ -489,12 +489,12 @@ namespace ParkingSystem.Server.Hubs
                         : 0
                 };
 
-                _logger.LogInformation($"Hoàn thành lấy tổng quan: Total={overview.TotalSlots}, Available={overview.AvailableSlots}, Occupied={overview.OccupiedSlots}");
+                _logger.LogInformation($"Overview complete: Total={overview.TotalSlots}, Available={overview.AvailableSlots}, Occupied={overview.OccupiedSlots}");
                 return overview;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy tổng quan parking: {Message}", ex.Message);
+                _logger.LogError(ex, "Error fetching parking overview: {Message}", ex.Message);
                 throw new HubException($"Error getting parking overview: {ex.Message}");
             }
         }
@@ -537,7 +537,7 @@ namespace ParkingSystem.Server.Hubs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Lỗi khi lấy slot {id}");
+                _logger.LogError(ex, $"Error fetching slot {id}");
                 throw new HubException($"Error getting slot: {ex.Message}");
             }
         }
@@ -561,7 +561,7 @@ namespace ParkingSystem.Server.Hubs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy slots trống");
+                _logger.LogError(ex, "Error getting available slots");
                 throw new HubException($"Error getting available slots: {ex.Message}");
             }
         }
@@ -594,7 +594,7 @@ namespace ParkingSystem.Server.Hubs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Lỗi khi cập nhật trạng thái slot {id}");
+                _logger.LogError(ex, $"Error updating slot status {id}");
                 throw new HubException($"Error updating slot status: {ex.Message}");
             }
         }
@@ -611,7 +611,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy chỗ đỗ"
+                        Message = "Slot not found"
                     };
                 }
 
@@ -620,7 +620,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Chỗ đỗ này đã được sử dụng"
+                        Message = "This slot is already in use"
                     };
                 }
 
@@ -634,7 +634,7 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Không tìm thấy khách hàng"
+                            Message = "Customer not found"
                         };
                     }
                 }
@@ -721,7 +721,7 @@ namespace ParkingSystem.Server.Hubs
                 var response = new RegisterParkingResponse
                 {
                     Success = true,
-                    Message = "Đăng ký chỗ đỗ thành công",
+                    Message = "Parking slot registered successfully",
                     RegistrationId = registration.RegistrationId,
                     CustomerId = customer.CustomerId,
                     VehicleId = vehicle.VehicleId,
@@ -738,11 +738,11 @@ namespace ParkingSystem.Server.Hubs
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError(ex, "Lỗi khi đăng ký parking");
+                _logger.LogError(ex, "Error registering parking");
                 return new RegisterParkingResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -760,7 +760,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy chỗ đỗ"
+                        Message = "Slot not found"
                     };
                 }
 
@@ -769,7 +769,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Chỗ đỗ này đã được sử dụng"
+                        Message = "This slot is already in use"
                     };
                 }
 
@@ -783,7 +783,7 @@ namespace ParkingSystem.Server.Hubs
                         return new RegisterParkingResponse
                         {
                             Success = false,
-                            Message = "Không tìm thấy khách hàng"
+                            Message = "Customer not found"
                         };
                     }
                 }
@@ -799,7 +799,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = $"Xe này đang đỗ ở chỗ {existingActiveRegistration.Slot?.SlotCode}. Vui lòng check-out trước khi đăng ký chỗ mới."
+                        Message = $"This vehicle is currently parked at slot {existingActiveRegistration.Slot?.SlotCode}. Please check out before registering a new slot."
                     };
                 }
 
@@ -812,7 +812,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy xe"
+                        Message = "Vehicle not found"
                     };
                 }
 
@@ -821,7 +821,7 @@ namespace ParkingSystem.Server.Hubs
                     return new RegisterParkingResponse
                     {
                         Success = false,
-                        Message = "Xe này không thuộc về bạn"
+                        Message = "This vehicle does not belong to you"
                     };
                 }
 
@@ -872,7 +872,7 @@ namespace ParkingSystem.Server.Hubs
                 var response = new RegisterParkingResponse
                 {
                     Success = true,
-                    Message = "Đăng ký chỗ đỗ thành công",
+                    Message = "Parking slot registered successfully",
                     RegistrationId = registration.RegistrationId,
                     CustomerId = request.CustomerId,
                     VehicleId = request.VehicleId,
@@ -893,7 +893,7 @@ namespace ParkingSystem.Server.Hubs
                 return new RegisterParkingResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -913,7 +913,7 @@ namespace ParkingSystem.Server.Hubs
                     return new CheckOutResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy thông tin đăng ký"
+                        Message = "Registration not found"
                     };
                 }
 
@@ -922,7 +922,7 @@ namespace ParkingSystem.Server.Hubs
                     return new CheckOutResponse
                     {
                         Success = false,
-                        Message = "Đã check out trước đó"
+                        Message = "Already checked out"
                     };
                 }
 
@@ -961,7 +961,7 @@ namespace ParkingSystem.Server.Hubs
                 var response = new CheckOutResponse
                 {
                     Success = true,
-                    Message = "Check out thành công",
+                    Message = "Check out completed",
                     CheckOutTime = registration.CheckOutTime,
                     TotalAmount = request.PaymentAmount,
                     Duration = duration
@@ -979,7 +979,7 @@ namespace ParkingSystem.Server.Hubs
                 return new CheckOutResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -993,8 +993,8 @@ namespace ParkingSystem.Server.Hubs
         {
             try
             {
-                _logger.LogInformation($"Customer {customerId} đang lấy slots theo khu vực...");
-                
+                _logger.LogInformation($"Customer {customerId} is fetching slots by area...");
+
                 var allSlots = await _context.ParkingSlots
                     .Include(s => s.ParkingRegistrations
                         .Where(r => r.Status == "Active" || r.Status == "CheckedIn"))
@@ -1008,7 +1008,7 @@ namespace ParkingSystem.Server.Hubs
                     .GroupBy(s => s.SlotCode.Length > 0 ? s.SlotCode[0].ToString().ToUpper() : "Unknown")
                     .Select(g => new CustomerParkingAreaDto
                     {
-                        AreaName = $"Khu {g.Key}",
+                        AreaName = $"Zone {g.Key}",
                         TotalSlots = g.Count(),
                         AvailableSlots = g.Count(s => s.Status == "Available"),
                         OccupiedSlots = g.Count(s => s.Status == "InUse" || s.Status == "Occupied"),
@@ -1041,12 +1041,12 @@ namespace ParkingSystem.Server.Hubs
                     .OrderBy(a => a.AreaName)
                     .ToList();
 
-                _logger.LogInformation($"Đã trả về {groupedSlots.Count} khu vực cho Customer (privacy protected)");
+                _logger.LogInformation($"Returned {groupedSlots.Count} areas for customer (privacy protected)");
                 return groupedSlots;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy slots cho Customer");
+                _logger.LogError(ex, "Error getting slots for customer");
                 throw new HubException($"Error getting slots: {ex.Message}");
             }
             }

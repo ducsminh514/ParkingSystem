@@ -7,18 +7,19 @@
 @inject SlotService SlotService 
 @inject IJSRuntime JSRuntime
 @inject UserService UserService
+@inject CustomerService CustomerService
 @implements IDisposable
 
-<PageTitle>Quản Lý Chỗ Đỗ - Staff</PageTitle>
+<PageTitle>Slot Management - Staff</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col">
-            <h3><i class="bi bi-p-square-fill"></i> Quản Lý Chỗ Đỗ Xe</h3>
+            <h3><i class="bi bi-p-square-fill"></i> Parking Slot Management</h3>
         </div>
         <div class="col-auto">
             <button class="btn btn-outline-primary" @onclick="RefreshSlots">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
+                <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>
         </div>
     </div>
@@ -31,7 +32,7 @@
         </div>
     }
 
-    <!-- Tổng quan -->
+    <!-- Overview -->
     @if (overview != null)
     {
         <div class="row mb-4">
@@ -40,7 +41,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="card-title mb-0">Tổng Số Chỗ</h6>
+                                <h6 class="card-title mb-0">Total Slots</h6>
                                 <h3 class="mb-0">@overview.TotalSlots</h3>
                             </div>
                             <i class="bi bi-grid-3x3-gap-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -53,7 +54,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="card-title mb-0">Chỗ Trống</h6>
+                                <h6 class="card-title mb-0">Available</h6>
                                 <h3 class="mb-0">@overview.AvailableSlots</h3>
                             </div>
                             <i class="bi bi-check-circle-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -66,7 +67,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="card-title mb-0">Đã Sử Dụng</h6>
+                                <h6 class="card-title mb-0">Occupied</h6>
                                 <h3 class="mb-0">@overview.OccupiedSlots</h3>
                             </div>
                             <i class="bi bi-x-circle-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -79,7 +80,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="card-title mb-0">Tỷ Lệ Lấp Đầy</h6>
+                                <h6 class="card-title mb-0">Occupancy Rate</h6>
                                 <h3 class="mb-0">@overview.OccupancyRate%</h3>
                             </div>
                             <i class="bi bi-pie-chart-fill" style="font-size: 2.5rem; opacity: 0.5;"></i>
@@ -94,21 +95,21 @@
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Đang tải...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Đang tải dữ liệu chỗ đỗ xe...</p>
+            <p class="mt-2">Loading parking slot data...</p>
         </div>
     }
     else if (parkingAreas.Count == 0)
     {
         <div class="text-center py-5">
             <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">Chưa có chỗ đỗ xe nào trong hệ thống</p>
+            <p class="text-muted mt-3">No parking slots in the system</p>
         </div>
     }
     else
     {
-        <!-- Hiển thị theo từng khu vực -->
+        <!-- Display by area -->
         @foreach (var area in parkingAreas)
         {
             <div class="card mb-4 shadow-sm">
@@ -121,13 +122,13 @@
                         </div>
                         <div class="col-auto">
                             <span class="badge bg-success me-2">
-                                <i class="bi bi-check-circle"></i> Trống: @area.AvailableSlots
+                                <i class="bi bi-check-circle"></i> Available: @area.AvailableSlots
                             </span>
                             <span class="badge bg-danger me-2">
-                                <i class="bi bi-x-circle"></i> Đã dùng: @area.OccupiedSlots
+                                <i class="bi bi-x-circle"></i> Occupied: @area.OccupiedSlots
                             </span>
                             <span class="badge bg-info">
-                                Tỷ lệ: @area.OccupancyRate%
+                                Rate: @area.OccupancyRate%
                             </span>
                         </div>
                     </div>
@@ -171,7 +172,7 @@
                             
                             <div class="parking-slot @statusClass"
                                  @onclick="() => OpenSlotModal(slot)"
-                                 title="@statusTitle - Click để xem chi tiết" >
+                                 title="Click to view details">
                                 <div class="slot-icon">
                                     <i class="bi @statusIcon"></i>
                                 </div>
@@ -214,7 +215,7 @@
     }
 </div>
 
-<!-- MODAL ĐĂNG KÝ SLOT -->
+<!-- SLOT REGISTRATION MODAL -->
 @if (selectedSlot != null && showModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -225,11 +226,11 @@
                         <i class="bi bi-info-circle"></i> 
                         @if (selectedSlot.IsAvailable)
                         {
-                            <span>Đăng Ký Chỗ Đỗ - @selectedSlot.SlotCode</span>
+                            <span>Register Parking Slot - @selectedSlot.SlotCode</span>
                         }
                         else
                         {
-                            <span>Chi Tiết Chỗ Đỗ - @selectedSlot.SlotCode</span>
+                            <span>Slot Details - @selectedSlot.SlotCode</span>
                         }
                     </h5>
                     <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
@@ -237,42 +238,42 @@
                 <div class="modal-body">
                     @if (selectedSlot.IsAvailable)
                     {
-                        <!-- LUỒNG ĐĂNG KÝ SLOT TRỐNG -->
+                        <!-- REGISTRATION WORKFLOW FOR EMPTY SLOT -->
                         
                         <!-- Step Indicator -->
                         <div class="step-indicator mb-4">
                             <div class="step @(registrationStep >= 1 ? "active" : "") @(registrationStep > 1 ? "completed" : "")">
                                 <div class="step-number">1</div>
-                                <div class="step-label">Số điện thoại</div>
+                                <div class="step-label">Phone Number</div>
                             </div>
                             <div class="step-line @(registrationStep > 1 ? "completed" : "")"></div>
                             <div class="step @(registrationStep >= 2 ? "active" : "") @(registrationStep > 2 ? "completed" : "")">
                                 <div class="step-number">2</div>
-                                <div class="step-label">Thông tin</div>
+                                <div class="step-label">Information</div>
                             </div>
                             <div class="step-line @(registrationStep > 2 ? "completed" : "")"></div>
                             <div class="step @(registrationStep >= 3 ? "active" : "")">
                                 <div class="step-number">3</div>
-                                <div class="step-label">Xác nhận</div>
+                                <div class="step-label">Confirmation</div>
                             </div>
                         </div>
 
                         @if (registrationStep == 1)
                         {
-                            <!-- BƯỚC 1: NHẬP SỐ ĐIỆN THOẠI -->
+                            <!-- STEP 1: INPUT PHONE -->
                             <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> Nhập số điện thoại khách hàng để kiểm tra
+                                <i class="bi bi-info-circle"></i> Enter customer's phone number to check
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Số Điện Thoại <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
                                 <div class="input-group input-group-lg">
                                     <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                                     <input type="tel" 
                                            class="form-control" 
                                            @bind="phoneNumber" 
                                            @bind:event="oninput"
-                                           placeholder="Nhập số điện thoại (10-11 số)"
+                                           placeholder="Enter phone number (10-11 digits)"
                                            maxlength="11"
                                            disabled="@isCheckingPhone" />
                                     <button class="btn btn-primary" 
@@ -286,10 +287,10 @@
                                         {
                                             <i class="bi bi-search me-2"></i>
                                         }
-                                        Kiểm tra
+                                        Check
                                     </button>
                                 </div>
-                                <small class="text-muted">VD: 0987654321</small>
+                                <small class="text-muted">e.g.: 0987654321</small>
                             </div>
 
                             @if (!string.IsNullOrEmpty(registrationError))
@@ -301,25 +302,25 @@
                         }
                         else if (registrationStep == 2)
                         {
-                            <!-- BƯỚC 2: THÔNG TIN CUSTOMER & VEHICLE -->
+                            <!-- STEP 2: CUSTOMER & VEHICLE INFO -->
                             
                             @if (customerCheckResult?.Exists == true)
                             {
-                                <!-- CUSTOMER ĐÃ TỒN TẠI -->
+                                <!-- CUSTOMER EXISTS -->
                                 <div class="alert alert-success">
-                                    <i class="bi bi-check-circle"></i> Tìm thấy khách hàng
+                                    <i class="bi bi-check-circle"></i> Customer found
                                 </div>
 
-                                <!-- Thông tin customer (READ-ONLY) -->
+                                <!-- Customer info (READ-ONLY) -->
                                 <div class="card mb-3 border-success">
                                     <div class="card-body">
-                                        <h6 class="card-title"><i class="bi bi-person-circle"></i> Thông tin khách hàng</h6>
+                                        <h6 class="card-title"><i class="bi bi-person-circle"></i> Customer Info</h6>
                                         <div class="row">
                                             <div class="col-md-6">
-                                                <p class="mb-1"><strong>Họ tên:</strong> @customerCheckResult.FullName</p>
+                                                <p class="mb-1"><strong>Name:</strong> @customerCheckResult.FullName</p>
                                             </div>
                                             <div class="col-md-6">
-                                                <p class="mb-1"><strong>SĐT:</strong> @customerCheckResult.Phone</p>
+                                                <p class="mb-1"><strong>Phone:</strong> @customerCheckResult.Phone</p>
                                             </div>
                                             @if (!string.IsNullOrEmpty(customerCheckResult.Email))
                                             {
@@ -331,10 +332,10 @@
                                     </div>
                                 </div>
 
-                                <!-- Chọn xe -->
+                                <!-- Select vehicle -->
                                 @if (customerCheckResult.Vehicles.Count > 0)
                                 {
-                                    <h6 class="mb-3"><i class="bi bi-car-front"></i> Chọn xe của khách hàng:</h6>
+                                    <h6 class="mb-3"><i class="bi bi-car-front"></i> Select customer's vehicle:</h6>
                                     <div class="list-group mb-3">
                                         @foreach (var vehicle in customerCheckResult.Vehicles)
                                         {
@@ -353,7 +354,7 @@
                                                             @if (isParked)
                                                             {
                                                                 <span class="badge bg-warning text-dark ms-2">
-                                                                    <i class="bi bi-geo-alt-fill"></i> Đang đỗ tại @vehicle.CurrentSlotCode
+                                                                    <i class="bi bi-geo-alt-fill"></i> Currently parked at @vehicle.CurrentSlotCode
                                                                 </span>
                                                             }
                                                         </small>
@@ -370,22 +371,22 @@
                                 else
                                 {
                                     <div class="alert alert-warning">
-                                        <i class="bi bi-exclamation-triangle"></i> Khách hàng chưa có xe nào. Vui lòng thêm xe mới.
+                                        <i class="bi bi-exclamation-triangle"></i> Customer has no vehicles. Please add a new vehicle.
                                     </div>
                                 }
 
-                                <!-- Option thêm xe mới -->
+                                <!-- Option to add new vehicle -->
                                 @if (customerCheckResult.Vehicles.Count == 0 || showAddVehicleForm)
                                 {
                                     <EditForm EditContext="@vehicleEditContext">
                                         <div class="card border-primary">
                                             <div class="card-body">
                                                 <h6 class="card-title">
-                                                    <i class="bi bi-plus-circle"></i> Thêm xe mới
+                                                    <i class="bi bi-plus-circle"></i> Add new vehicle
                                                     @if (customerCheckResult.Vehicles.Count > 0)
                                                     {
                                                         <button class="btn btn-sm btn-outline-secondary float-end" @onclick="() => showAddVehicleForm = false">
-                                                            <i class="bi bi-x"></i> Hủy
+                                                            <i class="bi bi-x"></i> Cancel
                                                         </button>
                                                     }
                                                 </h6>
@@ -393,18 +394,18 @@
                                                     <div class="col-md-6">
                                                         <DataAnnotationsValidator />
                                                         <ValidationSummary />
-                                                        <label class="form-label">Biển Số Xe <span class="text-danger">*</span></label>
-                                                        <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="VD: 29A-12345" />
+                                                        <label class="form-label">Plate Number <span class="text-danger">*</span></label>
+                                                        <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="e.g.: 29A-12345" />
                                                         <ValidationMessage For="@(() => vehicleModel.PlateNumber)" />
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <label class="form-label">Loại Xe <span class="text-danger">*</span></label>
+                                                        <label class="form-label">Vehicle Type <span class="text-danger">*</span></label>
                                                         <select class="form-select" @bind="newVehicleType">
-                                                            <option value="">-- Chọn loại xe --</option>
-                                                            <option value="Xe máy">Xe máy</option>
-                                                            <option value="Ô tô">Ô tô</option>
-                                                            <option value="Xe đạp">Xe đạp</option>
-                                                            <option value="Xe tải">Xe tải</option>
+                                                            <option value="">--  Select vehicle type --</option>
+                                                            @foreach (var vehicleType in activeVehicleTypes)
+                                                            {
+                                                                <option value="@vehicleType">@vehicleType</option>
+                                                            }
                                                         </select>
                                                     </div>
                                                 </div>
@@ -415,32 +416,32 @@
                                 else
                                 {
                                     <button class="btn btn-outline-primary btn-sm" @onclick="() => showAddVehicleForm = true">
-                                        <i class="bi bi-plus-circle"></i> Thêm xe mới
+                                        <i class="bi bi-plus-circle"></i> Add new vehicle
                                     </button>
                                 }
                             }
                             else
                             {
-                                <!-- CUSTOMER MỚI -->
+                                <!-- NEW CUSTOMER -->
                                 <div class="alert alert-warning">
-                                    <i class="bi bi-person-plus"></i> Khách hàng mới - Vui lòng nhập thông tin
+                                    <i class="bi bi-person-plus"></i> New customer - please enter info
                                 </div>
 
                                 <div class="card border-warning mb-3">
                                     <div class="card-body">
-                                        <h6 class="card-title"><i class="bi bi-person-circle"></i> Thông tin khách hàng</h6>
+                                        <h6 class="card-title"><i class="bi bi-person-circle"></i> Customer Info</h6>
                                         <div class="row g-3">
                                             <div class="col-md-6">
-                                                <label class="form-label">Họ Tên <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" @bind="newCustomerName" placeholder="Nhập họ tên" />
+                                                <label class="form-label">Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" @bind="newCustomerName" placeholder="Enter name" />
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
+                                                <label class="form-label">Phone Number <span class="text-danger">*</span></label>
                                                 <input type="tel" class="form-control" @bind="phoneNumber" readonly />
                                             </div>
                                             <div class="col-12">
-                                                <label class="form-label">Email (tùy chọn)</label>
-                                                <input type="email" class="form-control" @bind="newCustomerEmail" placeholder="Nhập email" />
+                                                <label class="form-label">Email (optional)</label>
+                                                <input type="email" class="form-control" @bind="newCustomerEmail" placeholder="Enter email" />
                                             </div>
                                         </div>
                                     </div>
@@ -449,23 +450,23 @@
                                 <EditForm EditContext="@vehicleEditContext">
                                     <div class="card border-primary">
                                         <div class="card-body">
-                                            <h6 class="card-title"><i class="bi bi-car-front"></i> Thông tin xe</h6>
+                                            <h6 class="card-title"><i class="bi bi-car-front"></i> Vehicle Info</h6>
                                             <div class="row g-3">
                                                 <div class="col-md-6">
                                                     <DataAnnotationsValidator />
                                                     <ValidationSummary />
-                                                    <label class="form-label">Biển Số Xe <span class="text-danger">*</span></label>
-                                                    <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="VD: 29A-12345" />
+                                                    <label class="form-label">Plate Number <span class="text-danger">*</span></label>
+                                                    <InputText class="form-control" @bind-Value="vehicleModel.PlateNumber" placeholder="e.g.: 29A-12345" />
                                                     <ValidationMessage For="@(() => vehicleModel.PlateNumber)" />
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label class="form-label">Loại Xe <span class="text-danger">*</span></label>
+                                                    <label class="form-label">Vehicle Type <span class="text-danger">*</span></label>
                                                     <select class="form-select" @bind="newVehicleType">
-                                                        <option value="">-- Chọn loại xe --</option>
-                                                        <option value="Xe máy">Xe máy</option>
-                                                        <option value="Ô tô">Ô tô</option>
-                                                        <option value="Xe đạp">Xe đạp</option>
-                                                        <option value="Xe tải">Xe tải</option>
+                                                        <option value="">-- Select vehicle type --</option>
+                                                        <option value="Motorbike">Motorbike</option>
+                                                        <option value="Car">Car</option>
+                                                        <option value="Bicycle">Bicycle</option>
+                                                        <option value="Truck">Truck</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -483,18 +484,18 @@
                         }
                         else if (registrationStep == 3)
                         {
-                            <!-- BƯỚC 3: XÁC NHẬN THÔNG TIN -->
+                            <!-- STEP 3: CONFIRMATION -->
                             <div class="alert alert-success">
-                                <i class="bi bi-clipboard-check"></i> Vui lòng kiểm tra thông tin trước khi đăng ký
+                                <i class="bi bi-clipboard-check"></i> Please review the information before registering
                             </div>
 
                             <div class="confirmation-card">
-                                <h5 class="mb-3"><i class="bi bi-file-earmark-text"></i> Thông Tin Đăng Ký</h5>
+                                <h5 class="mb-3"><i class="bi bi-file-earmark-text"></i> Registration Info</h5>
                                 
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <div class="info-box">
-                                            <label>Chỗ Đỗ</label>
+                                            <label>Slot</label>
                                             <div class="info-value">
                                                 <i class="bi bi-p-square text-success"></i> 
                                                 <strong>@selectedSlot.SlotCode</strong>
@@ -504,14 +505,14 @@
                                     
                                     <div class="col-12">
                                         <div class="info-box bg-light">
-                                            <h6><i class="bi bi-person-circle"></i> Khách Hàng</h6>
+                                            <h6><i class="bi bi-person-circle"></i> Customer</h6>
                                             <div class="row">
                                                 <div class="col-md-6">
-                                                    <label>Họ tên:</label>
+                                                    <label>Name:</label>
                                                     <div class="info-value">@GetConfirmationCustomerName()</div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label>Số điện thoại:</label>
+                                                    <label>Phone:</label>
                                                     <div class="info-value">@phoneNumber</div>
                                                 </div>
                                                 @if (!string.IsNullOrEmpty(GetConfirmationEmail()))
@@ -527,14 +528,14 @@
 
                                     <div class="col-12">
                                         <div class="info-box bg-light">
-                                            <h6><i class="bi bi-car-front"></i> Xe</h6>
+                                            <h6><i class="bi bi-car-front"></i> Vehicle</h6>
                                             <div class="row">
                                                 <div class="col-md-6">
-                                                    <label>Biển số:</label>
+                                                    <label>Plate Number:</label>
                                                     <div class="info-value fw-bold text-primary">@GetConfirmationPlateNumber()</div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <label>Loại xe:</label>
+                                                    <label>Vehicle Type:</label>
                                                     <div class="info-value">@GetConfirmationVehicleType()</div>
                                                 </div>
                                             </div>
@@ -555,29 +556,29 @@
                     {
                         @if (showCheckoutConfirmation)
                         {
-                            <!-- BƯỚC 2: HIỂN THỊ THÔNG TIN PHÍ VÀ XÁC NHẬN -->
+                            <!-- STEP 2: DISPLAY FEE & CONFIRMATION -->
                             @if (feeCalculation == null)
                             {
-                                <!-- ĐANG TẢI THÔNG TIN PHÍ -->
+                                <!-- LOADING FEE INFO -->
                                 <div class="text-center py-4">
                                     <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Đang tải...</span>
+                                        <span class="visually-hidden">Loading...</span>
                                     </div>
-                                    <p class="mt-2">Đang tính toán phí...</p>
+                                    <p class="mt-2">Calculating fee...</p>
                                 </div>
                             }
                             else if (!feeCalculation.Success)
                             {
-                                <!-- LỖI KHI TÍNH PHÍ -->
+                                <!-- FEE CALC ERROR -->
                                 <div class="alert alert-danger">
                                     <i class="bi bi-exclamation-triangle-fill"></i> @feeCalculation.Message
                                 </div>
                             }
                             else
                             {
-                                <!-- HIỂN THỊ THÔNG TIN PHÍ -->
+                                <!-- DISPLAY FEE INFO -->
                                 <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-circle-fill"></i> Vui lòng kiểm tra thông tin trước khi xác nhận check-out
+                                    <i class="bi bi-exclamation-circle-fill"></i> Please review information before confirming check-out
                                 </div>
 
                                 <!-- Timeline Check-in/Check-out -->
@@ -587,7 +588,7 @@
                                             <i class="bi bi-box-arrow-in-right"></i>
                                         </div>
                                         <div class="timeline-content flex-grow-1">
-                                            <label>Thời gian vào</label>
+                                            <label>Check-in Time</label>
                                             <div class="fw-bold fs-5">@feeCalculation.CheckInTime.ToString("dd/MM/yyyy HH:mm:ss")</div>
                                         </div>
                                     </div>
@@ -599,7 +600,7 @@
                                             <i class="bi bi-box-arrow-right"></i>
                                         </div>
                                         <div class="timeline-content flex-grow-1">
-                                            <label>Thời gian ra (dự kiến)</label>
+                                            <label>Check-out Time (estimated)</label>
                                             <div class="fw-bold fs-5">@feeCalculation.CheckOutTime.ToString("dd/MM/yyyy HH:mm:ss")</div>
                                         </div>
                                     </div>
@@ -607,16 +608,16 @@
                                     <div class="text-center mt-3">
                                         <span class="badge bg-primary" style="font-size: 1.1rem; padding: 0.75rem 1.25rem;">
                                             <i class="bi bi-clock-history"></i>
-                                            Thời gian đỗ: @feeCalculation.DurationDisplay
+                                            Duration: @feeCalculation.DurationDisplay
                                         </span>
                                     </div>
                                 </div>
 
-                                <!-- Thông tin xe & khách hàng -->
+                                <!-- Vehicle & Customer Info -->
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-6">
                                         <div class="info-item">
-                                            <label class="text-muted small">Biển Số Xe</label>
+                                            <label class="text-muted small">Plate Number</label>
                                             <div class="fw-bold fs-5">
                                                 <i class="bi bi-credit-card-2-front text-primary"></i>
                                                 @feeCalculation.VehiclePlateNumber
@@ -625,7 +626,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="info-item">
-                                            <label class="text-muted small">Loại Xe</label>
+                                            <label class="text-muted small">Vehicle Type</label>
                                             <div class="fw-bold">
                                                 <i class="bi bi-car-front text-primary"></i>
                                                 @feeCalculation.VehicleType
@@ -634,7 +635,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="info-item">
-                                            <label class="text-muted small">Khách Hàng</label>
+                                            <label class="text-muted small">Customer</label>
                                             <div class="fw-bold">
                                                 <i class="bi bi-person text-success"></i>
                                                 @feeCalculation.CustomerName
@@ -643,7 +644,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="info-item">
-                                            <label class="text-muted small">Số Điện Thoại</label>
+                                            <label class="text-muted small">Phone</label>
                                             <div class="fw-bold">
                                                 <i class="bi bi-telephone text-success"></i>
                                                 @feeCalculation.CustomerPhone
@@ -652,28 +653,28 @@
                                     </div>
                                 </div>
 
-                                <!-- Chi tiết tính phí -->
+                                <!-- Fee Calculation Details -->
                                 <div class="fee-calculation-card">
                                     <h5 class="mb-3">
-                                        <i class="bi bi-calculator"></i> Chi Tiết Tính Phí
+                                        <i class="bi bi-calculator"></i> Fee Calculation Details
                                     </h5>
 
                                     <div class="fee-details mb-3">
                                         <div class="fee-row">
                                             <span class="fee-label">
-                                                <i class="bi bi-tag"></i> Đơn giá (@feeCalculation.VehicleType):
+                                                <i class="bi bi-tag"></i> Price (@feeCalculation.VehicleType):
                                             </span>
                                             <span class="fee-value">
-                                                @string.Format("{0:N0}", feeCalculation.PricePerHour) đ/giờ
+                                                @string.Format("{0:N0}", feeCalculation.PricePerHour) VND/hour
                                             </span>
                                         </div>
 
                                         <div class="fee-row">
                                             <span class="fee-label">
-                                                <i class="bi bi-clock"></i> Số giờ đỗ:
+                                                <i class="bi bi-clock"></i> Total hours:
                                             </span>
                                             <span class="fee-value">
-                                                @feeCalculation.TotalHours.ToString("0.00") giờ
+                                                @feeCalculation.TotalHours.ToString("0.00") hours
                                             </span>
                                         </div>
 
@@ -681,19 +682,19 @@
 
                                         <div class="fee-row total">
                                             <span class="fee-label fw-bold fs-5">
-                                                <i class="bi bi-cash-coin"></i> TỔNG TIỀN:
+                                                <i class="bi bi-cash-coin"></i> TOTAL:
                                             </span>
                                             <span class="fee-value fw-bold text-danger" style="font-size: 1.75rem;">
-                                                @string.Format("{0:N0}", feeCalculation.TotalAmount) đ
+                                                @string.Format("{0:N0}", feeCalculation.TotalAmount) VND
                                             </span>
                                         </div>
                                     </div>
 
-                                    <!-- Công thức tính -->
+                                    <!-- Formula -->
                                     <div class="alert alert-light mb-0">
                                         <small class="text-muted">
                                             <i class="bi bi-info-circle"></i>
-                                            Công thức: @string.Format("{0:N0}", feeCalculation.PricePerHour) đ/giờ × @feeCalculation.TotalHours.ToString("0.00") giờ = @string.Format("{0:N0}", feeCalculation.TotalAmount) đ
+                                            Formula: @string.Format("{0:N0}", feeCalculation.PricePerHour) VND/hour × @feeCalculation.TotalHours.ToString("0.00") hours = @string.Format("{0:N0}", feeCalculation.TotalAmount) VND
                                         </small>
                                     </div>
                                 </div>
@@ -708,15 +709,15 @@
                         }
                         else
                         {
-                            <!-- BƯỚC 1: HIỂN THỊ THÔNG TIN SLOT NHƯ CŨ -->
+                            <!-- STEP 1: SHOW SLOT INFO AS BEFORE -->
                             <div class="alert alert-danger">
-                                <i class="bi bi-x-circle-fill"></i> Chỗ đỗ này đang được sử dụng
+                                <i class="bi bi-x-circle-fill"></i> This parking slot is currently occupied
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="info-item">
-                                        <label class="text-muted small">Biển Số Xe</label>
+                                        <label class="text-muted small">Plate Number</label>
                                         <div class="fw-bold fs-5">
                                             <i class="bi bi-credit-card-2-front text-primary"></i> @selectedSlot.VehiclePlateNumber
                                         </div>
@@ -724,7 +725,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="info-item">
-                                        <label class="text-muted small">Loại Xe</label>
+                                        <label class="text-muted small">Vehicle Type</label>
                                         <div class="fw-bold">
                                             <i class="bi bi-car-front text-primary"></i> @(selectedSlot.VehicleType ?? "N/A")
                                         </div>
@@ -732,7 +733,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="info-item">
-                                        <label class="text-muted small">Khách Hàng</label>
+                                        <label class="text-muted small">Customer</label>
                                         <div class="fw-bold">
                                             <i class="bi bi-person text-success"></i> @(selectedSlot.CustomerName ?? "N/A")
                                         </div>
@@ -740,7 +741,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="info-item">
-                                        <label class="text-muted small">Số Điện Thoại</label>
+                                        <label class="text-muted small">Phone</label>
                                         <div class="fw-bold">
                                             <i class="bi bi-telephone text-success"></i> @(selectedSlot.CustomerPhone ?? "N/A")
                                         </div>
@@ -748,7 +749,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="info-item">
-                                        <label class="text-muted small">Thời Gian Vào</label>
+                                        <label class="text-muted small">Check-in Time</label>
                                         <div class="fw-bold">
                                             <i class="bi bi-clock-history text-info"></i> @(selectedSlot.CheckInTime?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
                                         </div>
@@ -756,7 +757,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="info-item">
-                                        <label class="text-muted small">Thời Gian Đỗ</label>
+                                        <label class="text-muted small">Parking Duration</label>
                                         <div class="fw-bold">
                                             <i class="bi bi-hourglass-split text-warning"></i> @(selectedSlot.ParkingDuration ?? "N/A")
                                         </div>
@@ -772,20 +773,20 @@
                         @if (registrationStep > 1)
                         {
                             <button type="button" class="btn btn-secondary" @onclick="PreviousStep" disabled="@isSubmitting">
-                                <i class="bi bi-arrow-left"></i> Quay lại
+                                <i class="bi bi-arrow-left"></i> Back
                             </button>
                         }
                         else
                         {
                             <button type="button" class="btn btn-secondary" @onclick="CloseModal">
-                                <i class="bi bi-x-lg"></i> Đóng
+                                <i class="bi bi-x-lg"></i> Close
                             </button>
                         }
                         
                         @if (registrationStep < 3)
                         {
                             <button type="button" class="btn btn-primary" @onclick="NextStep" disabled="@isSubmitting">
-                                Tiếp tục <i class="bi bi-arrow-right"></i>
+                                Next <i class="bi bi-arrow-right"></i>
                             </button>
                         }
                         else
@@ -794,12 +795,12 @@
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2"></span>
-                                    <span>Đang xử lý...</span>
+                                    <span>Processing...</span>
                                 }
                                 else
                                 {
                                     <i class="bi bi-check-circle"></i>
-                                    <span>Xác Nhận Đăng Ký</span>
+                                    <span>Confirm Registration</span>
                                 }
                             </button>
                         }
@@ -808,9 +809,9 @@
                     {
                         @if (showCheckoutConfirmation)
                         {
-                            <!-- FOOTER CHO MÀN HÌNH XÁC NHẬN PHÍ -->
+                            <!-- FOOTER FOR FEE CONFIRMATION -->
                             <button type="button" class="btn btn-secondary" @onclick="BackToSlotInfo" disabled="@isSubmitting">
-                                <i class="bi bi-arrow-left"></i> Quay lại
+                                <i class="bi bi-arrow-left"></i> Back
                             </button>
 
                             @if (feeCalculation != null && feeCalculation.Success)
@@ -822,21 +823,21 @@
                                     @if (isSubmitting)
                                     {
                                         <span class="spinner-border spinner-border-sm me-2"></span>
-                                        <span>Đang xử lý...</span>
+                                        <span>Processing...</span>
                                     }
                                     else
                                     {
                                         <i class="bi bi-check-circle-fill"></i>
-                                        <span>Xác Nhận Check-out (@string.Format("{0:N0}", feeCalculation.TotalAmount) đ)</span>
+                                        <span>Confirm Check-out (@string.Format("{0:N0}", feeCalculation.TotalAmount) VND)</span>
                                     }
                                 </button>
                             }
                         }
                         else
                         {
-                            <!-- FOOTER CHO MÀN HÌNH THÔNG TIN SLOT -->
+                            <!-- FOOTER FOR SLOT INFO SCREEN -->
                             <button type="button" class="btn btn-secondary" @onclick="CloseModal">
-                                <i class="bi bi-x-lg"></i> Đóng
+                                <i class="bi bi-x-lg"></i> Close
                             </button>
 
                             @if (selectedSlot.Status != "Maintenance")
@@ -862,7 +863,7 @@
         <div class="d-flex">
             <div class="toast-body">
                 <i class="bi bi-check-circle-fill me-2"></i>
-                <span id="toastMessage">Thao tác thành công!</span>
+                <span id="toastMessage">Action successful!</span>
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
@@ -870,7 +871,7 @@
 </div>
 
 <style>
-    /* Grid layout cho parking slots */
+    /* Grid layout for parking slots */
     .parking-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -878,7 +879,7 @@
         padding: 1rem 0.5rem;
     }
 
-    /* Style cho mỗi slot */
+    /* Style for each slot */
     .parking-slot {
         min-height: 200px;
         border: none;
@@ -1295,6 +1296,7 @@
     private bool showAddVehicleForm = false;
     private string newVehiclePlateNumber = string.Empty;
     private string newVehicleType = string.Empty;
+    private List<string> activeVehicleTypes = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -1304,9 +1306,77 @@
         SlotService.OnSlotUpdated += HandleSlotUpdated;
         SlotService.OnParkingRegistered += HandleParkingRegistered;
         SlotService.OnSlotCheckedOut += HandleSlotCheckedOut;
+        CustomerService.OnVehicleTypesChanged += HandleVehicleTypesChanged;
 
         await LoadParkingData();
+        await LoadActiveVehicleTypes();
+
     }
+    private async Task LoadActiveVehicleTypes()
+    {
+        try
+        {
+            activeVehicleTypes = await CustomerService.GetActiveVehicleTypes();
+            if (!activeVehicleTypes.Any())
+            {
+                errorMessage = "Không tìm thấy loại xe nào đang hoạt động. Vui lòng liên hệ quản trị viên.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi tải danh sách loại xe: {ex.Message}";
+        }
+    }
+
+    private async Task HandleVehicleTypesChanged(ParkingPriceDto parkingPriceDto)
+    {
+        try
+        {
+            // Reload the active vehicle types
+            await LoadActiveVehicleTypes();
+        
+            // Only proceed if we're in the vehicle registration modal
+            if (!showModal) return;
+        
+            // Check if we're in the registration flow and have a selected vehicle type
+            if (registrationStep >= 2 && !string.IsNullOrEmpty(newVehicleType))
+            {
+                // Check if the changed vehicle type matches the currently selected one
+                if (newVehicleType == parkingPriceDto.VehicleType)
+                {
+                    if (!parkingPriceDto.IsActive)
+                    {
+                        // If the vehicle type was deactivated, update the UI and show error
+                        newVehicleType = activeVehicleTypes.FirstOrDefault() ?? string.Empty;
+                    
+                        if (activeVehicleTypes.Any())
+                        {
+                            registrationError = $"Vehicle type '{parkingPriceDto.VehicleType}' has been deactivated. Please select another type.";
+                        }
+                        else
+                        {
+                            registrationError = "No vehicle types available. Please contact the administrator.";
+                        }
+                    }
+                    else
+                    {
+                        // Update to the new vehicle type details
+                        newVehicleType = parkingPriceDto.VehicleType;
+                    }
+                
+                    // Force UI update
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            registrationError = $"Error updating vehicle types: {ex.Message}";
+            Console.Error.WriteLine($"Error in HandleVehicleTypesChanged: {ex}");
+        }
+    }
+
+
 
     private void HandleSlotUpdated(ParkingSlotDto updatedSlot)
     {
@@ -1366,13 +1436,13 @@
 
             if (!SlotService.IsConnected)
             {
-                errorMessage = "Đang kết nối tới server...";
+                errorMessage = "Connecting to server...";
                 StateHasChanged();
 
                 bool reconnected = await SlotService.TryReconnectAsync();
                 if (!reconnected)
                 {
-                    errorMessage = "Không thể kết nối tới server. Vui lòng kiểm tra và thử lại.";
+                    errorMessage = "Unable to connect to server. Please check and try again.";
                     return;
                 }
 
@@ -1389,7 +1459,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Không thể tải dữ liệu: {ex.Message}";
+            errorMessage = $"Could not load data: {ex.Message}";
         }
         finally
         {
@@ -1400,7 +1470,7 @@
     private async Task RefreshSlots()
     {
         await LoadParkingData();
-        await ShowToast("Đã làm mới danh sách chỗ đỗ");
+        await ShowToast("Refreshed parking slots list");
     }
 
     private void OpenSlotModal(ParkingSlotDto slot)
@@ -1422,11 +1492,11 @@
             // Initialize/clear vehicle input model and edit context
             vehicleModel = new VehicleInputModel();
             vehicleEditContext = new EditContext(vehicleModel);
-             registrationError = string.Empty;
+            registrationError = string.Empty;
         }
         else
         {
-            // Slot đang sử dụng - Tính phí ngay
+            // Slot is used - calculate fee
             _ = LoadFeeCalculation();
         }
     }
@@ -1456,7 +1526,7 @@
         }
         catch (Exception ex)
         {
-            registrationError = $"Lỗi tính phí: {ex.Message}";
+            registrationError = $"Fee calculation error: {ex.Message}";
             feeCalculation = null;
         }
         finally
@@ -1482,13 +1552,13 @@
 
             if (string.IsNullOrWhiteSpace(phoneNumber))
             {
-                registrationError = "Vui lòng nhập số điện thoại";
+                registrationError = "Please enter phone number";
                 return;
             }
 
             if (phoneNumber.Length < 10 || phoneNumber.Length > 11)
             {
-                registrationError = "Số điện thoại phải có 10-11 số";
+                registrationError = "Phone number must be 10-11 digits";
                 return;
             }
 
@@ -1497,12 +1567,12 @@
 
             customerCheckResult = await SlotService.CheckCustomerByPhone(phoneNumber);
             
-            // Chuyển sang bước 2
+            // Go to step 2
             registrationStep = 2;
         }
         catch (Exception ex)
         {
-            registrationError = $"Lỗi khi kiểm tra: {ex.Message}";
+            registrationError = $"Error during check: {ex.Message}";
         }
         finally
         {
@@ -1537,54 +1607,54 @@
             // Validate step 2
             if (customerCheckResult?.Exists == true)
             {
-                // Customer tồn tại - phải chọn xe hoặc nhập xe mới
+                // Customer exists - must select or add vehicle
                 if (selectedVehicleId == null && string.IsNullOrWhiteSpace(vehicleModel?.PlateNumber))
                 {
-                    registrationError = "Vui lòng chọn xe hoặc thêm xe mới";
+                    registrationError = "Please select or add a vehicle";
                     return;
                 }
 
                 if (selectedVehicleId == null)
                 {
-                    // Đang thêm xe mới
+                    // Adding new vehicle
                     // validate vehicle model
                     if (vehicleEditContext == null || !vehicleEditContext.Validate())
                     {
-                        registrationError = "Vui lòng kiểm tra lại biển số xe";
+                        registrationError = "Please check plate number";
                         return;
                     }
                     // set normalized plate into working field
                     newVehiclePlateNumber = NormalizePlate(vehicleModel.PlateNumber);
                     if (string.IsNullOrWhiteSpace(newVehicleType))
                     {
-                        registrationError = "Vui lòng chọn loại xe";
+                        registrationError = "Please select vehicle type";
                         return;
                     }
                 }
             }
             else
             {
-                // Customer mới - validate tất cả
+                // New customer - validate all
                 if (string.IsNullOrWhiteSpace(newCustomerName))
                 {
-                    registrationError = "Vui lòng nhập họ tên khách hàng";
+                    registrationError = "Please enter customer name";
                     return;
                 }
                 // validate vehicle model for new customer
                 if (vehicleEditContext == null || !vehicleEditContext.Validate())
                 {
-                    registrationError = "Vui lòng kiểm tra lại biển số xe";
+                    registrationError = "Please check plate number";
                     return;
                 }
                 newVehiclePlateNumber = NormalizePlate(vehicleModel.PlateNumber);
                 if (string.IsNullOrWhiteSpace(newVehicleType))
                 {
-                    registrationError = "Vui lòng chọn loại xe";
+                    registrationError = "Please select vehicle type";
                     return;
                 }
             }
 
-            // Chuyển sang bước 3 (Confirmation)
+            // Move to step 3 (Confirmation)
             registrationStep = 3;
         }
     }
@@ -1593,72 +1663,71 @@
     {
         showCheckoutConfirmation = true;
         registrationError = string.Empty;
-	}
+    }
 
     private void BackToSlotInfo()
     {
         showCheckoutConfirmation = false;
         registrationError = string.Empty;
-	}
+    }
+
     private async Task SubmitRegistration()
-     {
-         
-         if (selectedSlot == null) return;
+    {
+        if (selectedSlot == null) return;
 
-         try
-         {
-             isSubmitting = true;
-             registrationError = string.Empty;
+        try
+        {
+            isSubmitting = true;
+            registrationError = string.Empty;
 
-             var request = new StaffRegisterParkingRequest
-             {
-                 SlotId = selectedSlot.SlotId,
-                 StaffId = currentStaffId,
-                 CustomerPhone = phoneNumber
-             };
+            var request = new StaffRegisterParkingRequest
+            {
+                SlotId = selectedSlot.SlotId,
+                StaffId = currentStaffId,
+                CustomerPhone = phoneNumber
+            };
 
-             if (customerCheckResult?.Exists == true)
-             {
-                 // Customer đã tồn tại
-                 request.CustomerId = customerCheckResult.CustomerId;
+            if (customerCheckResult?.Exists == true)
+            {
+                // Existing customer
+                request.CustomerId = customerCheckResult.CustomerId;
 
-                 if (selectedVehicleId.HasValue)
-                 {
-                     // Chọn xe có sẵn
-                     request.VehicleId = selectedVehicleId.Value;
-                 }
-                 else
-                 {
-                     // Thêm xe mới cho customer cũ
-                     // ensure vehicle model is valid as a safety net
+                if (selectedVehicleId.HasValue)
+                {
+                    // Existing vehicle
+                    request.VehicleId = selectedVehicleId.Value;
+                }
+                else
+                {
+                    // Add vehicle for existing customer
                     if (vehicleEditContext != null && !vehicleEditContext.Validate())
                     {
-                        registrationError = "Biển số xe không hợp lệ";
+                        registrationError = "Invalid plate number";
                         return;
                     }
                     request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
-                     request.VehicleType = newVehicleType;
-                 }
-             }
-             else
-             {
-                 // Customer mới
-                 request.CustomerName = newCustomerName.Trim();
-                 request.CustomerEmail = string.IsNullOrWhiteSpace(newCustomerEmail) ? null : newCustomerEmail.Trim();
-                 if (vehicleEditContext != null && !vehicleEditContext.Validate())
-                 {
-                     registrationError = "Biển số xe không hợp lệ";
-                     return;
-                 }
-                 request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
-                 request.VehicleType = newVehicleType;
-             }
+                    request.VehicleType = newVehicleType;
+                }
+            }
+            else
+            {
+                // New customer
+                request.CustomerName = newCustomerName.Trim();
+                request.CustomerEmail = string.IsNullOrWhiteSpace(newCustomerEmail) ? null : newCustomerEmail.Trim();
+                if (vehicleEditContext != null && !vehicleEditContext.Validate())
+                {
+                    registrationError = "Invalid plate number";
+                    return;
+                }
+                request.PlateNumber = NormalizePlate(vehicleModel.PlateNumber);
+                request.VehicleType = newVehicleType;
+            }
 
-             var response = await SlotService.StaffRegisterParking(request);
+            var response = await SlotService.StaffRegisterParking(request);
 
             if (response.Success)
             {
-                await ShowToast($"Đăng ký thành công chỗ {selectedSlot.SlotCode}!");
+                await ShowToast($"Successfully registered spot {selectedSlot.SlotCode}!");
                 CloseModal();
                 await RefreshSlots();
             }
@@ -1666,27 +1735,27 @@
             {
                 registrationError = response.Message;
             }
-         }
-         catch (Exception ex)
-         {
-             registrationError = $"Lỗi: {ex.Message}";
-         }
-         finally
-         {
-             isSubmitting = false;
-         }
+        }
+        catch (Exception ex)
+        {
+            registrationError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 
     private async Task HandleCheckOut()
     {
         if (selectedSlot?.CurrentRegistrationId == null)
         {
-            await ShowToast("Không tìm thấy thông tin đăng ký", false);
+            await ShowToast("No registration information found", false);
             return;
         }
 
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
-            $"Bạn có chắc muốn check out cho xe {selectedSlot.VehiclePlateNumber}?");
+            $"Are you sure you want to check out vehicle {selectedSlot.VehiclePlateNumber}?");
 
         if (!confirmed) return;
 
@@ -1708,18 +1777,18 @@
                 var duration = response.Duration.HasValue 
                     ? $"{response.Duration.Value.Hours}h {response.Duration.Value.Minutes}m" 
                     : "N/A";
-                await ShowToast($"Check out thành công! Thời gian: {duration}");
+                await ShowToast($"Check out successful! Duration: {duration}");
                 CloseModal();
                 await RefreshSlots();
             }
             else
             {
-                await ShowToast(response.Message ?? "Check out thất bại", false);
+                await ShowToast(response.Message ?? "Check out failed", false);
             }
         }
         catch (Exception ex)
         {
-            await ShowToast($"Lỗi: {ex.Message}", false);
+            await ShowToast($"Error: {ex.Message}", false);
         }
         finally
         {
@@ -1788,6 +1857,8 @@
         SlotService.OnSlotUpdated -= HandleSlotUpdated;
         SlotService.OnParkingRegistered -= HandleParkingRegistered;
         SlotService.OnSlotCheckedOut -= HandleSlotCheckedOut;
+        CustomerService.OnVehicleTypesChanged -= HandleVehicleTypesChanged;
+
     }
 
     // Vehicle input model for validation
@@ -1805,9 +1876,9 @@
 
     public class VehicleInputModel
     {
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Vui lòng nhập biển số xe")] 
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{2,3}[A-Za-z]{1,2}[-\s]?[0-9]{3,5}(?:[.\s]?[0-9]{2})?$", ErrorMessage = "Biển số không hợp lệ. Ví dụ: 29A-12345 hoặc 30A-123.45")]
-        [System.ComponentModel.DataAnnotations.StringLength(15, ErrorMessage = "Biển số quá dài")]
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Please enter plate number")] 
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{2,3}[A-Za-z]{1,2}[-\s]?[0-9]{3,5}(?:[.\s]?[0-9]{2})?$", ErrorMessage = "Invalid plate number. E.g.: 29A-12345 or 30A-123.45")]
+        [System.ComponentModel.DataAnnotations.StringLength(15, ErrorMessage = "Plate number too long")]
         public string PlateNumber { get; set; } = string.Empty;
     }
 }

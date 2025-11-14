@@ -59,7 +59,7 @@ namespace ParkingSystem.Server.Hubs
                     return new CalculateFeeResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy thông tin đăng ký"
+                        Message = "Registration not found"
                     };
                 }
 
@@ -68,12 +68,12 @@ namespace ParkingSystem.Server.Hubs
                     return new CalculateFeeResponse
                     {
                         Success = false,
-                        Message = "Đã check-out trước đó"
+                        Message = "This registration has already been checked out"
                     };
                 }
 
-                // Lấy giá theo loại xe
-                var vehicleType = registration.Vehicle?.VehicleType ?? "Xe máy";
+                // Get price by vehicle type
+                var vehicleType = registration.Vehicle?.VehicleType ?? "Motorbike";
                 var price = await _context.ParkingPrices
                     .FirstOrDefaultAsync(p => p.VehicleType == vehicleType );
 
@@ -97,15 +97,15 @@ namespace ParkingSystem.Server.Hubs
 
                 // Format duration display
                 var durationDisplay = duration.Days > 0
-                    ? $"{duration.Days} ngày {duration.Hours} giờ {duration.Minutes} phút"
+                    ? $"{duration.Days} days {duration.Hours} hours {duration.Minutes} minutes"
                     : duration.Hours > 0
-                        ? $"{duration.Hours} giờ {duration.Minutes} phút"
-                        : $"{duration.Minutes} phút";
+                        ? $"{duration.Hours} hours {duration.Minutes} minutes"
+                        : $"{duration.Minutes} minutes";
 
                 return new CalculateFeeResponse
                 {
                     Success = true,
-                    Message = "Tính phí thành công",
+                    Message = "Fee calculated successfully",
                     SlotCode = registration.Slot?.SlotCode ?? "N/A",
                     VehiclePlateNumber = registration.Vehicle?.PlateNumber ?? "N/A",
                     VehicleType = vehicleType,
@@ -126,7 +126,7 @@ namespace ParkingSystem.Server.Hubs
                 return new CalculateFeeResponse
                 {
                     Success = false,
-                    Message = $"Lỗi tính phí: {ex.Message}"
+                    Message = $"Error calculating fee: {ex.Message}"
                 };
             }
         }
@@ -152,7 +152,7 @@ namespace ParkingSystem.Server.Hubs
                     return new CheckOutWithPaymentResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy thông tin đăng ký"
+                        Message = "Registration not found"
                     };
                 }
 
@@ -161,7 +161,7 @@ namespace ParkingSystem.Server.Hubs
                     return new CheckOutWithPaymentResponse
                     {
                         Success = false,
-                        Message = "Đã check-out trước đó"
+                        Message = "This registration has already been checked out"
                     };
                 }
 
@@ -199,7 +199,7 @@ namespace ParkingSystem.Server.Hubs
                 var response = new CheckOutWithPaymentResponse
                 {
                     Success = true,
-                    Message = "Check-out thành công",
+                    Message = "Check-out successful",
                     CheckOutTime = checkOutTime,
                     Duration = duration,
                     TotalAmount = request.PaymentAmount,
@@ -229,7 +229,7 @@ namespace ParkingSystem.Server.Hubs
                 return new CheckOutWithPaymentResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }

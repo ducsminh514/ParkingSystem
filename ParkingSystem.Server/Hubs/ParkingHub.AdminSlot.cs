@@ -136,7 +136,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập mã slot"
+                        Message = "Please enter slot code"
                     };
                 }
 
@@ -147,7 +147,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = $"Mã slot '{request.SlotCode}' đã tồn tại"
+                        Message = $"Slot code '{request.SlotCode}' already exists"
                     };
                 }
 
@@ -178,7 +178,7 @@ namespace ParkingSystem.Server.Hubs
                 return new SlotOperationResponse
                 {
                     Success = true,
-                    Message = "Thêm slot thành công",
+                    Message = "Add slot successfully",
                     Slot = slotDto
                 };
             }
@@ -188,7 +188,7 @@ namespace ParkingSystem.Server.Hubs
                 return new SlotOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -208,7 +208,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập prefix (VD: A, B, VIP)"
+                        Message = "Please enter prefix (e.g. A, B, VIP)"
                     };
                 }
 
@@ -217,7 +217,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = "Số bắt đầu phải nhỏ hơn số kết thúc"
+                        Message = "Start number must be less than end number"
                     };
                 }
 
@@ -226,7 +226,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = "Chỉ được tạo tối đa 100 slots một lúc"
+                        Message = "Only up to 100 slots can be created at once"
                     };
                 }
 
@@ -242,7 +242,7 @@ namespace ParkingSystem.Server.Hubs
                     var exists = await _context.ParkingSlots.AnyAsync(s => s.SlotCode == slotCode);
                     if (exists)
                     {
-                        errors.Add($"{slotCode} đã tồn tại");
+                        errors.Add($"{slotCode} already exists");
                         continue;
                     }
 
@@ -271,10 +271,10 @@ namespace ParkingSystem.Server.Hubs
                 // Broadcast to all clients
                 await Clients.All.SendAsync("OnSlotsBulkCreated", createdSlots);
 
-                var message = $"Đã tạo {createdSlots.Count} slots thành công";
+                var message = $"Created {createdSlots.Count} slots successfully";
                 if (errors.Count > 0)
                 {
-                    message += $". {errors.Count} slots bị trùng: {string.Join(", ", errors.Take(5))}";
+                    message += $". {errors.Count} slots duplicated: {string.Join(", ", errors.Take(5))}";
                 }
 
                 return new SlotOperationResponse
@@ -290,7 +290,7 @@ namespace ParkingSystem.Server.Hubs
                 return new SlotOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -310,7 +310,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy slot"
+                        Message = "Slot not found"
                     };
                 }
 
@@ -320,7 +320,7 @@ namespace ParkingSystem.Server.Hubs
                     return new SlotOperationResponse
                     {
                         Success = false,
-                        Message = "Vui lòng nhập mã slot"
+                        Message = "Please enter slot code"
                     };
                 }
 
@@ -335,7 +335,7 @@ namespace ParkingSystem.Server.Hubs
                         return new SlotOperationResponse
                         {
                             Success = false,
-                            Message = $"Mã slot '{request.SlotCode}' đã tồn tại"
+                            Message = $"Slot code '{request.SlotCode}' already exists"
                         };
                     }
                 }
@@ -363,7 +363,7 @@ namespace ParkingSystem.Server.Hubs
                 return new SlotOperationResponse
                 {
                     Success = true,
-                    Message = "Cập nhật slot thành công",
+                    Message = "Update slot successfully",
                     Slot = slotDto
                 };
             }
@@ -373,7 +373,7 @@ namespace ParkingSystem.Server.Hubs
                 return new SlotOperationResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -397,7 +397,7 @@ namespace ParkingSystem.Server.Hubs
                     return new DeleteSlotResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy slot"
+                        Message = "Slot not found"
                     };
                 }
 
@@ -413,8 +413,8 @@ namespace ParkingSystem.Server.Hubs
                     return new DeleteSlotResponse
                     {
                         Success = false,
-                        Message = $"Không thể xóa slot {slot.SlotCode}. Slot đang có xe đăng ký (Registration ID: {activeReg.RegistrationId.ToString().Substring(0, 8)}...)",
-                        Errors = new List<string> { "Vui lòng check-out xe trước khi xóa slot" }
+                        Message = $"Cannot delete slot {slot.SlotCode}. Slot has a registered vehicle (Registration ID: {activeReg.RegistrationId.ToString().Substring(0, 8)}...)",
+                        Errors = new List<string> { "Please check-out the vehicle before deleting the slot" }
                     };
                 }
 
@@ -430,7 +430,7 @@ namespace ParkingSystem.Server.Hubs
                 return new DeleteSlotResponse
                 {
                     Success = true,
-                    Message = $"Đã xóa slot {slot.SlotCode}",
+                    Message = $"Deleted slot {slot.SlotCode}",
                     DeletedCount = 1,
                     FailedCount = 0
                 };
@@ -441,7 +441,7 @@ namespace ParkingSystem.Server.Hubs
                 return new DeleteSlotResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }
@@ -466,7 +466,7 @@ namespace ParkingSystem.Server.Hubs
                     return new DeleteSlotResponse
                     {
                         Success = false,
-                        Message = "Không tìm thấy slots để xóa"
+                        Message = "Slots not found"
                     };
                 }
 
@@ -482,7 +482,7 @@ namespace ParkingSystem.Server.Hubs
 
                     if (hasActiveRegistration && !request.ForceDelete)
                     {
-                        errors.Add($"{slot.SlotCode}: Đang có xe đăng ký");
+                        errors.Add($"{slot.SlotCode}: Has a registered vehicle");
                         failedCount++;
                         continue;
                     }
@@ -501,7 +501,7 @@ namespace ParkingSystem.Server.Hubs
                 var message = $"Đã xóa {deletedCount} slots";
                 if (failedCount > 0)
                 {
-                    message += $". {failedCount} slots không thể xóa (đang có xe đăng ký)";
+                    message += $". {failedCount} slots cannot be deleted (has a registered vehicle)";
                 }
 
                 return new DeleteSlotResponse
@@ -519,7 +519,7 @@ namespace ParkingSystem.Server.Hubs
                 return new DeleteSlotResponse
                 {
                     Success = false,
-                    Message = $"Lỗi server: {ex.Message}"
+                    Message = $"Server error: {ex.Message}"
                 };
             }
         }

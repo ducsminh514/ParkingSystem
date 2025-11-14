@@ -5,14 +5,14 @@
 @inject SimpleAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
-<PageTitle>Đăng nhập</PageTitle>
+<PageTitle>Login</PageTitle>
 
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-5">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">🔐 Đăng nhập</h4>
+                    <h4 class="mb-0">🔐 Login</h4>
                 </div>
                 <div class="card-body p-4">
                     @if (!string.IsNullOrEmpty(errorMessage))
@@ -26,30 +26,30 @@
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Loại tài khoản:</label>
+                            <label class="form-label fw-bold">Account type:</label>
                             <select class="form-select" @bind="UserType">
-                                <option value="customer">👤 Khách hàng</option>
-                                <option value="staff">👔 Nhân viên</option>
+                                <option value="customer">👤 Customer</option>
+                                <option value="staff">👔 Staff</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">
-                                @(UserType == "staff" ? "Tên đăng nhập" : "Email/SĐT"):
+                                @(UserType == "staff" ? "Username" : "Email/Phone"):
                             </label>
                             <input type="text" class="form-control"
                                    @bind="loginRequest.UsernameOrEmail"
                                    required
-                                   placeholder="@(UserType == "staff" ? "Nhập tên đăng nhập" : "Nhập email hoặc số điện thoại")" />
+                                   placeholder="@(UserType == "staff" ? "Enter username" : "Enter email or phone number")" />
                             <ValidationMessage For="@(() => loginRequest.UsernameOrEmail)" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu:</label>
+                            <label class="form-label fw-bold">Password:</label>
                             <input type="password" class="form-control"
                                    @bind="loginRequest.Password"
                                    required
-                                   placeholder="Nhập mật khẩu" />
+                                   placeholder="Enter password" />
                             <ValidationMessage For="@(() => loginRequest.Password)" />
                         </div>
 
@@ -57,18 +57,18 @@
                             @if (isLoading)
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
-                                <span>Đang xử lý...</span>
+                                <span>Processing...</span>
                             }
                             else
                             {
-                                <span>Đăng nhập</span>
+                                <span>Login</span>
                             }
                         </button>
                     </EditForm>
 
                     <hr class="my-4" />
                     <div class="text-center">
-                        <p class="mb-0">Chưa có tài khoản? <a href="/register" class="fw-bold">Đăng ký ngay</a></p>
+                        <p class="mb-0">Don't have an account? <a href="/register" class="fw-bold">Register now</a></p>
                     </div>
                 </div>
             </div>
@@ -82,7 +82,7 @@
     private bool isLoading;
     private string userType = "customer";
 
-    // ✅ Property với setter tự động xử lý thay đổi
+    // Property with setter to automatically handle changes
     private string UserType
     {
         get => userType;
@@ -92,7 +92,7 @@
             {
                 userType = value;
                 loginRequest.IsStaff = value == "staff";
-                loginRequest.UsernameOrEmail = ""; // Clear input khi đổi loại
+                loginRequest.UsernameOrEmail = ""; // Clear input when switching type
                 errorMessage = null; // Clear error
             }
         }
@@ -114,12 +114,12 @@
             }
             else
             {
-                errorMessage = result.Message ?? "Đăng nhập thất bại";
+                errorMessage = result.Message ?? "Login failed";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Lỗi: {ex.Message}";
+            errorMessage = $"Error: {ex.Message}";
             Console.WriteLine($"[Login Error] {ex}");
         }
         finally
