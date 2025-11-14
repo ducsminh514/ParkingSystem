@@ -77,7 +77,10 @@
                                     <button class="btn btn-outline-primary" @onclick="() => EditVehicle(vehicle)" title="Sửa">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteVehicle(vehicle)" title="Xóa">
+                                    <button class="btn btn-outline-danger" 
+                                            @onclick="() => ConfirmDeleteVehicle(vehicle)"
+                                            title="@(vehicle.ParkingRegistrations.Any(pr => pr.Status == "Active" && pr.CheckOutTime == null) ? "Không thể xóa xe đang đỗ" : "Xóa")"
+                                            disabled="@vehicle.HasActiveParking">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -165,7 +168,7 @@
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private Guid currentCustomerId;
-
+    private bool hasActiveParking = false;
     protected override async Task OnInitializedAsync()
     {
         try
@@ -173,17 +176,17 @@
             // Lấy CustomerId từ authentication state
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
-            
+
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var customerId))
             {
                 currentCustomerId = customerId;
-                
-                
+
+
                 // Register event handlers
                 CustomerService.OnVehicleAdded += HandleVehicleAdded;
                 CustomerService.OnVehicleUpdated += HandleVehicleUpdated;
                 CustomerService.OnVehicleDeleted += HandleVehicleDeleted;
-                
+
                 // Load vehicles
                 await LoadVehicles();
             }

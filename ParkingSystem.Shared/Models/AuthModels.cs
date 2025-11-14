@@ -1,12 +1,28 @@
 namespace ParkingSystem.Shared.Models;
+using System.ComponentModel.DataAnnotations;
 
 // Request đăng ký
 public class RegisterRequest
 {
-    public string FullName { get; set; } = null!;
-    public string Phone { get; set; } = null!;
+    [Required(ErrorMessage = "Họ và tên là bắt buộc")]
+    [StringLength(100, ErrorMessage = "Họ và tên không được vượt quá 100 ký tự")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
+    [RegularExpression(@"^\+?\d{9,15}$", ErrorMessage = "Số điện thoại không hợp lệ")]
+    public string Phone { get; set; } = string.Empty;
+
+    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     public string? Email { get; set; }
-    public string Password { get; set; } = null!;
+
+    [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
+    [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
+    [DataType(DataType.Password)]
+    public string Password { get; set; } = string.Empty;
+
+    [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
+    [DataType(DataType.Password)]
+    public string? ConfirmPassword { get; set; }
 }
 
 // Request đăng nhập

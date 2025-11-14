@@ -17,7 +17,10 @@ namespace ParkingSystem.Client.Services
         public event Action<Guid>? OnSlotCheckedOut;
         public event Action<Guid, ParkingHistoryDto>? OnNewCheckIn;
         public event Action<Guid, Guid>? OnCheckOut;
-
+        public event Action<SlotManagementDto>? OnSlotCreated; // New
+        public event Action<List<SlotManagementDto>>? OnSlotsBulkCreated; // New
+        public event Action<SlotManagementDto>? OnAdminSlotUpdated; // New
+        public event Action<Guid>? OnSlotDeleted; 
         public bool IsConnected => Connection?.State == HubConnectionState.Connected;
 
         public SlotService(ISignalRConnectionService signalRConnectionService, ILogger<SlotService> logger)
@@ -65,6 +68,32 @@ namespace ParkingSystem.Client.Services
                 Console.WriteLine($"[SignalR Event] Check-out for registration {registrationId}");
                 OnCheckOut?.Invoke(customerId, registrationId);
             });
+            Connection.On<SlotManagementDto>("OnSlotCreated", (newSlot) =>
+            {
+                _logger.LogInformation($"[Real-time] Slot created: {newSlot.SlotCode}");
+                OnSlotCreated?.Invoke(newSlot);
+            });
+
+            // New: Listen to bulk slot creation
+            Connection.On<List<SlotManagementDto>>("OnSlotsBulkCreated", (newSlots) =>
+            {
+                _logger.LogInformation($"[Real-time] {newSlots.Count} slots bulk created.");
+                OnSlotsBulkCreated?.Invoke(newSlots);
+            });
+
+            // New: Listen to admin slot updates
+            Connection.On<SlotManagementDto>("OnAdminSlotUpdated", (updatedSlot) =>
+            {
+                _logger.LogInformation($"[Real-time] Admin slot updated: {updatedSlot.SlotCode}");
+                OnAdminSlotUpdated?.Invoke(updatedSlot);
+            });
+
+            // New: Listen to slot deletion
+            Connection.On<Guid>("OnSlotDeleted", (slotId) =>
+            {
+                _logger.LogInformation($"[Real-time] Slot deleted: {slotId}");
+                OnSlotDeleted?.Invoke(slotId);
+            });
         }
 
         // ============ HELPER METHODS ============
@@ -96,6 +125,149 @@ namespace ParkingSystem.Client.Services
                 return false;
             }
         }
+        
+        
+        // ============ ADMIN SLOT MANAGEMENT ============
+
+        /// <summary>
+        /// Lấy slots grouped by area - Admin only
+        /// </summary>
+        public async Task<List<ParkingAreaGroupDto>> GetSlotsGroupedByArea()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<List<ParkingAreaGroupDto>>("GetSlotsGroupedByArea");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting slots grouped by area");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Lấy thống kê slots - Admin only
+        /// </summary>
+        public async Task<SlotsStatisticsDto> GetSlotsStatistics()
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotsStatisticsDto>("GetSlotsStatistics");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting slots statistics");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Tạo slot mới - Admin only
+        /// </summary>
+        public async Task<SlotOperationResponse> CreateSlot(CreateSlotRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotOperationResponse>("CreateSlot", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating slot");
+                return new SlotOperationResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Tạo nhiều slots (bulk) - Admin only
+        /// </summary>
+        public async Task<SlotOperationResponse> BulkCreateSlots(BulkCreateSlotsRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotOperationResponse>("BulkCreateSlots", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error bulk creating slots");
+                return new SlotOperationResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật slot - Admin only
+        /// </summary>
+        public async Task<SlotOperationResponse> UpdateSlot(UpdateSlotRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<SlotOperationResponse>("UpdateSlot", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating slot");
+                return new SlotOperationResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Xóa slot - Admin only
+        /// </summary>
+        public async Task<DeleteSlotResponse> DeleteSlot(Guid slotId, bool forceDelete = false)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<DeleteSlotResponse>("DeleteSlot", slotId, forceDelete);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting slot");
+                return new DeleteSlotResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Xóa nhiều slots (bulk) - Admin only
+        /// </summary>
+        public async Task<DeleteSlotResponse> BulkDeleteSlots(BulkDeleteSlotsRequest request)
+        {
+            EnsureConnected();
+            try
+            {
+                return await Connection.InvokeAsync<DeleteSlotResponse>("BulkDeleteSlots", request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error bulk deleting slots");
+                return new DeleteSlotResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kết nối: {ex.Message}"
+                };
+            }
+        }
+        
         public async Task<ParkingHistoryResponse> GetMyHistoryAsync(Guid customerId)
         {
             try

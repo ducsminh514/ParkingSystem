@@ -141,7 +141,7 @@ namespace ParkingSystem.Client.Services
             }
         }
 
-        public async Task DeleteCustomerAsync(Guid customerId)
+        public async Task  DeleteCustomerAsync(Guid customerId)
         {
             EnsureConnected();
             try

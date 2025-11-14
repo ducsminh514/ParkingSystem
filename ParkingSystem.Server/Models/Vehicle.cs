@@ -19,6 +19,7 @@ public partial class Vehicle
     public Guid CustomerId { get; set; }
 
     public virtual Customer Customer { get; set; } = null!;
+    public bool HasActiveParking => ParkingRegistrations.Any(pr => pr.Status == "InUse" && pr.CheckOutTime == null);
 
     public virtual ICollection<ParkingRegistration> ParkingRegistrations { get; set; } = new List<ParkingRegistration>();
 }
