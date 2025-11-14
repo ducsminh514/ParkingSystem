@@ -144,58 +144,55 @@
                     <div class="parking-grid">
                         @foreach (var slot in area.Slots)
                         {
-                            if (slot.Status != "Maintenance")
-                            {
-                                var isMySlot = !slot.IsAvailable && slot.CustomerId == currentCustomerId;
-
-                                <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied") @(isMySlot ? "my-slot" : "")"
-                                     @onclick="() => OpenSlotModal(slot)"
-                                     title="@(slot.IsAvailable ? "Click để đăng ký" : isMySlot ? "Chỗ đỗ của bạn - Click để xem chi tiết" : "Đã có người sử dụng")">
-                                    <div class="slot-icon">
-                                        @if (slot.IsAvailable)
-                                        {
-                                            <i class="bi bi-p-square"></i>
-                                        }
-                                        else if (isMySlot)
-                                        {
-                                            <i class="bi bi-star-fill"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-car-front-fill"></i>
-                                        }
-                                    </div>
-                                    <div class="slot-code">@slot.SlotCode</div>
-
-                                    @if (isMySlot)
+                            var isMySlot = !slot.IsAvailable && slot.CustomerId == currentCustomerId;
+                            
+                            <div class="parking-slot @(slot.IsAvailable ? "available" : "occupied") @(isMySlot ? "my-slot" : "")"
+                                 @onclick="() => OpenSlotModal(slot)"
+                                 title="@(slot.IsAvailable ? "Click to register" : isMySlot ? "Your slot - Click to view details" : "Occupied")">
+                                <div class="slot-icon">
+                                    @if (slot.IsAvailable)
                                     {
-                                        <!-- Chỉ hiển thị info nếu là slot của mình -->
-                                        <div class="slot-info">
-                                            <small class="d-block text-truncate fw-bold">
-                                                <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
-                                            </small>
-                                            @if (slot.CheckInTime.HasValue)
-                                            {
-                                                <small class="d-block">
-                                                    <i class="bi bi-clock"></i> @slot.ParkingDuration
-                                                </small>
-                                            }
-                                            <div class="my-slot-badge">
-                                                <i class="bi bi-person-check-fill"></i> Của bạn
-                                            </div>
-                                        </div>
+                                        <i class="bi bi-p-square"></i>
                                     }
-                                    else if (!slot.IsAvailable)
+                                    else if (isMySlot)
                                     {
-                                        <!-- Slot người khác - chỉ hiển thị trạng thái -->
-                                        <div class="slot-status">
-                                            <small class="text-muted">
-                                                <i class="bi bi-lock-fill"></i> Đã sử dụng
-                                            </small>
-                                        </div>
+                                        <i class="bi bi-star-fill"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-car-front-fill"></i>
                                     }
                                 </div>
-                            }
+                                <div class="slot-code">@slot.SlotCode</div>
+                                
+                                @if (isMySlot)
+                                {
+                                    <!-- Info for your slot -->
+                                    <div class="slot-info">
+                                        <small class="d-block text-truncate fw-bold">
+                                            <i class="bi bi-credit-card-2-front"></i> @slot.VehiclePlateNumber
+                                        </small>
+                                        @if (slot.CheckInTime.HasValue)
+                                        {
+                                            <small class="d-block">
+                                                <i class="bi bi-clock"></i> @slot.ParkingDuration
+                                            </small>
+                                        }
+                                        <div class="my-slot-badge">
+                                            <i class="bi bi-person-check-fill"></i> Yours
+                                        </div>
+                                    </div>
+                                }
+                                else if (!slot.IsAvailable)
+                                {
+                                    <!-- Other's slot - show status only -->
+                                    <div class="slot-status">
+                                        <small class="text-muted">
+                                            <i class="bi bi-lock-fill"></i> Occupied
+                                        </small>
+                                    </div>
+                                }
+                            </div>
                         }
                     </div>
                 </div>
@@ -378,18 +375,18 @@
                     }
                     else if (isMySlot)
                     {
-                        <button type="button" class="btn btn-danger" @onclick="HandleCheckOut" disabled="@isSubmitting">
+                        @* <button type="button" class="btn btn-danger" @onclick="HandleCheckOut" disabled="@isSubmitting">
                             @if (isSubmitting)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 <span>Processing...</span>
                             }
-                            @* else
+                            else
                             {
                                 <i class="bi bi-box-arrow-right"></i>
                                 <span>Check Out</span>
-                            } *@
-                        </button>
+                            }
+                        </button> *@
                     }
                 </div>
             </div>

@@ -4,28 +4,28 @@ using System.ComponentModel.DataAnnotations;
 // Request đăng ký
 public class RegisterRequest
 {
-    [Required(ErrorMessage = "Họ và tên là bắt buộc")]
-    [StringLength(100, ErrorMessage = "Họ và tên không được vượt quá 100 ký tự")]
+    [Required(ErrorMessage = "Full name is required")]
+    [StringLength(100, ErrorMessage = "Full name cannot exceed 100 characters")]
     public string FullName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
-    [RegularExpression(@"^\+?\d{9,15}$", ErrorMessage = "Số điện thoại không hợp lệ")]
+    [Required(ErrorMessage = "Phone number is required")]
+    [RegularExpression(@"^\+?\d{9,15}$", ErrorMessage = "Invalid phone number")]
     public string Phone { get; set; } = string.Empty;
 
-    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+    [EmailAddress(ErrorMessage = "Invalid email address")]
     public string? Email { get; set; }
 
-    [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
-    [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
+    [Required(ErrorMessage = "Password is required")]
+    [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
     [DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
 
-    [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
+    [Compare("Password", ErrorMessage = "Passwords do not match")]
     [DataType(DataType.Password)]
     public string? ConfirmPassword { get; set; }
 }
 
-// Request đăng nhập
+// Login Request
 public class LoginRequest
 {
     public string UsernameOrEmail { get; set; } = null!;
@@ -33,7 +33,7 @@ public class LoginRequest
     public bool IsStaff { get; set; } // true = Staff, false = Customer
 }
 
-// Response sau khi đăng nhập/đăng ký
+// Response after login/register
 public class AuthResult
 {
     public bool Success { get; set; }

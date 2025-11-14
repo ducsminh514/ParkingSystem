@@ -513,7 +513,7 @@ namespace ParkingSystem.Server.Hubs
 
                 if (slot == null)
                 {
-                    throw new HubException($"Không tìm thấy slot với ID: {id}");
+                    throw new HubException($"Slot not found with ID: {id}");
                 }
 
                 var currentReg = slot.ParkingRegistrations
@@ -574,7 +574,7 @@ namespace ParkingSystem.Server.Hubs
 
                 if (slot == null)
                 {
-                    throw new HubException($"Không tìm thấy slot với ID: {id}");
+                    throw new HubException($"Slot not found with ID: {id}");
                 }
 
                 slot.Status = status;
